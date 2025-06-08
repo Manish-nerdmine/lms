@@ -17,13 +17,33 @@ import { Response } from 'express';
 import { VideosService } from './videos.service';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { PasscodeAuthGuard } from '@app/common/auth/passcode-auth.guard';
+import { ApiTags, ApiConsumes, ApiBody } from '@nestjs/swagger';
 
+@ApiTags('videos')
 @Controller('courses/:courseId/videos')
 @UseGuards(PasscodeAuthGuard)
 export class VideosController {
   constructor(private readonly videosService: VideosService) {}
 
   @Post()
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        video: {
+          type: 'string',
+          format: 'binary',
+        },
+        title: {
+          type: 'string',
+        },
+        description: {
+          type: 'string',
+        },
+      },
+    },
+  })
   @UseInterceptors(FileInterceptor('video'))
   async uploadVideo(
     @UploadedFile() file: Express.Multer.File,

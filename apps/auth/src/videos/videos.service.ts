@@ -26,7 +26,13 @@ export class VideosService {
     const filepath = path.join(this.uploadDir, filename);
 
     // Save file to disk
-    fs.writeFileSync(filepath, file.buffer);
+    try {
+      fs.writeFileSync(filepath, file.buffer);
+      this.logger.log(`Video file saved successfully at ${filepath}`);
+    } catch (error) {
+      this.logger.error(`Failed to save video file: ${error.message}`);
+      throw new Error('Failed to save video file');
+    }
 
     // Create video document
     const video = new this.videoModel({
