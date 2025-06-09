@@ -13,7 +13,6 @@ import { CreateCourseDto } from './dto/create-course.dto';
 import { PasscodeAuthGuard } from '@app/common/auth/passcode-auth.guard';
 
 @Controller('courses')
-@UseGuards(PasscodeAuthGuard)
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 

@@ -21,28 +21,33 @@ export class VideosService {
     }
   }
 
-  async uploadVideo(file: Express.Multer.File, createVideoDto: CreateVideoDto, courseId: string): Promise<Video> {
-    const filename = `${uuidv4()}-${file.originalname}`;
-    const filepath = path.join(this.uploadDir, filename);
-    let videoUrl = '';
-    if (createVideoDto.videoUrl) {
-      videoUrl = createVideoDto.videoUrl;
-    } else {
+  async uploadVideo(file: Express.Multer.File | undefined, createVideoDto: CreateVideoDto, courseId: string): Promise<Video> {
+    let videoUrl = createVideoDto.videoUrl;
+    let filename: string | undefined;
+
+    if (file) {
+      filename = `${uuidv4()}-${file.originalname}`;
+      const filepath = path.join(this.uploadDir, filename);
       videoUrl = `/videos/stream/${filename}`;
+
+      // Save file to disk
+      try {
+        fs.writeFileSync(filepath, file.buffer);
+        this.logger.log(`Video file saved successfully at ${filepath}`);
+      } catch (error) {
+        this.logger.error(`Failed to save video file: ${error.message}`);
+        throw new Error('Failed to save video file');
+      }
     }
-    // Save file to disk
-    try {
-      fs.writeFileSync(filepath, file.buffer);
-      this.logger.log(`Video file saved successfully at ${filepath}`);
-    } catch (error) {
-      this.logger.error(`Failed to save video file: ${error.message}`);
-      throw new Error('Failed to save video file');
+
+    if (!videoUrl) {
+      throw new Error('Either video file or videoUrl must be provided');
     }
 
     // Create video document
     const video = new this.videoModel({
       ...createVideoDto,
-      videoUrl: videoUrl, // URL to stream the video
+      videoUrl,
       courseId,
       order: await this.getNextOrder(courseId),
     });

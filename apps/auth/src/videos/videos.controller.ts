@@ -32,7 +32,7 @@ const ALLOWED_VIDEO_FORMATS = [
 
 @ApiTags('videos')
 @Controller('courses/:courseId/videos')
-@UseGuards(PasscodeAuthGuard)
+//@UseGuards(PasscodeAuthGuard)
 export class VideosController {
   constructor(private readonly videosService: VideosService) {}
 
@@ -47,12 +47,16 @@ export class VideosController {
           format: 'binary',
           description: 'Video file (MP4, AVI, MOV, WMV, MKV, WebM, or FLV)',
         },
+        videoUrl: {
+          type: 'string',
+        },
         title: {
           type: 'string',
         },
         description: {
           type: 'string',
         },
+     
       },
     },
   })
@@ -62,9 +66,9 @@ export class VideosController {
     @Body() createVideoDto: CreateVideoDto,
     @Param('courseId') courseId: string,
   ) {
-    if (!file) {
-      throw new BadRequestException('No video file uploaded');
-    }
+    // if (!file) {
+    //   throw new BadRequestException('No video file uploaded');
+    // }
 
     if (!ALLOWED_VIDEO_FORMATS.includes(file.mimetype)) {
       throw new BadRequestException(
