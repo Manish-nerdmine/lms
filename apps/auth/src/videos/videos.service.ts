@@ -24,7 +24,12 @@ export class VideosService {
   async uploadVideo(file: Express.Multer.File, createVideoDto: CreateVideoDto, courseId: string): Promise<Video> {
     const filename = `${uuidv4()}-${file.originalname}`;
     const filepath = path.join(this.uploadDir, filename);
-
+    let videoUrl = '';
+    if (createVideoDto.videoUrl) {
+      videoUrl = createVideoDto.videoUrl;
+    } else {
+      videoUrl = `/videos/stream/${filename}`;
+    }
     // Save file to disk
     try {
       fs.writeFileSync(filepath, file.buffer);
@@ -37,7 +42,7 @@ export class VideosService {
     // Create video document
     const video = new this.videoModel({
       ...createVideoDto,
-      videoUrl: `/videos/stream/${filename}`, // URL to stream the video
+      videoUrl: videoUrl, // URL to stream the video
       courseId,
       order: await this.getNextOrder(courseId),
     });

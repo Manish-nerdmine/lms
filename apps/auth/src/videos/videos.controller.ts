@@ -11,6 +11,7 @@ import {
   Res,
   StreamableFile,
   Put,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -18,6 +19,16 @@ import { VideosService } from './videos.service';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { PasscodeAuthGuard } from '@app/common/auth/passcode-auth.guard';
 import { ApiTags, ApiConsumes, ApiBody } from '@nestjs/swagger';
+
+const ALLOWED_VIDEO_FORMATS = [
+  'video/mp4',
+  'video/x-msvideo', // AVI
+  'video/quicktime', // MOV
+  'video/x-ms-wmv', // WMV
+  'video/x-matroska', // MKV
+  'video/webm', // WebM
+  'video/x-flv', // FLV
+];
 
 @ApiTags('videos')
 @Controller('courses/:courseId/videos')
@@ -34,6 +45,7 @@ export class VideosController {
         video: {
           type: 'string',
           format: 'binary',
+          description: 'Video file (MP4, AVI, MOV, WMV, MKV, WebM, or FLV)',
         },
         title: {
           type: 'string',
@@ -50,6 +62,16 @@ export class VideosController {
     @Body() createVideoDto: CreateVideoDto,
     @Param('courseId') courseId: string,
   ) {
+    if (!file) {
+      throw new BadRequestException('No video file uploaded');
+    }
+
+    if (!ALLOWED_VIDEO_FORMATS.includes(file.mimetype)) {
+      throw new BadRequestException(
+        'Invalid video format. Supported formats: MP4, AVI, MOV, WMV, MKV, WebM, and FLV',
+      );
+    }
+
     return this.videosService.uploadVideo(file, createVideoDto, courseId);
   }
 

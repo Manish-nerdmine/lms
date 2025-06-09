@@ -8,4 +8,8 @@ export class CreateVideoDto {
   @IsOptional()
   @IsString()
   description?: string;
-} 
+
+  @IsOptional()
+  @IsString()
+  videoUrl?: string;
+}
