@@ -6,6 +6,7 @@ import { CreateVideoDto } from './dto/create-video.dto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import * as ffmpeg from 'fluent-ffmpeg';
 
 @Injectable()
 export class VideosService {
@@ -21,9 +22,24 @@ export class VideosService {
     }
   }
 
+  private async getVideoDuration(filePath: string): Promise<number> {
+    return new Promise((resolve, reject) => {
+      ffmpeg.ffprobe(filePath, (err, metadata) => {
+        if (err) {
+          this.logger.error(`Error getting video duration: ${err.message}`);
+          reject(err);
+          return;
+        }
+        const duration = metadata.format.duration;
+        resolve(duration);
+      });
+    });
+  }
+
   async uploadVideo(file: Express.Multer.File | undefined, createVideoDto: CreateVideoDto, courseId: string): Promise<Video> {
     let videoUrl = createVideoDto.videoUrl;
     let filename: string | undefined;
+    let duration: number | undefined;
 
     if (file) {
       filename = `${uuidv4()}-${file.originalname}`;
@@ -34,6 +50,15 @@ export class VideosService {
       try {
         fs.writeFileSync(filepath, file.buffer);
         this.logger.log(`Video file saved successfully at ${filepath}`);
+
+        // Get video duration
+        try {
+          duration = await this.getVideoDuration(filepath);
+          this.logger.log(`Video duration: ${duration} seconds`);
+        } catch (error) {
+          this.logger.error(`Failed to get video duration: ${error.message}`);
+          // Continue without duration if it fails
+        }
       } catch (error) {
         this.logger.error(`Failed to save video file: ${error.message}`);
         throw new Error('Failed to save video file');
@@ -48,6 +73,7 @@ export class VideosService {
     const video = new this.videoModel({
       ...createVideoDto,
       videoUrl,
+      duration,
       courseId,
       order: await this.getNextOrder(courseId),
     });

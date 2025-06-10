@@ -47,16 +47,18 @@ export class VideosController {
           format: 'binary',
           description: 'Video file (MP4, AVI, MOV, WMV, MKV, WebM, or FLV)',
         },
-        videoUrl: {
-          type: 'string',
-        },
         title: {
           type: 'string',
+          description: 'Title of the video',
         },
         description: {
           type: 'string',
+          description: 'Description of the video',
         },
-     
+        videoUrl: {
+          type: 'string',
+          description: 'URL of the video (if not uploading a file)',
+        },
       },
     },
   })
@@ -66,16 +68,6 @@ export class VideosController {
     @Body() createVideoDto: CreateVideoDto,
     @Param('courseId') courseId: string,
   ) {
-    // if (!file) {
-    //   throw new BadRequestException('No video file uploaded');
-    // }
-
-    if (!ALLOWED_VIDEO_FORMATS.includes(file.mimetype)) {
-      throw new BadRequestException(
-        'Invalid video format. Supported formats: MP4, AVI, MOV, WMV, MKV, WebM, and FLV',
-      );
-    }
-
     return this.videosService.uploadVideo(file, createVideoDto, courseId);
   }
 
