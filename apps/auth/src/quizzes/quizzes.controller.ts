@@ -15,7 +15,6 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('quizzes')
 @Controller('courses/:courseId/quizzes')
-@UseGuards(PasscodeAuthGuard)
 export class QuizzesController {
   constructor(private readonly quizzesService: QuizzesService) {}
 
