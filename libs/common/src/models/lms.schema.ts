@@ -51,8 +51,32 @@ export class Quiz extends Document {
   @Prop()
   description: string;
 
-  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Question' }] })
-  questions: Question[];
+  @Prop({
+    type: [{
+      question: { type: String, required: true },
+      points: { type: Number, default: 1 },
+      options: {
+        type: [{
+          text: { type: String, required: true },
+          isCorrect: { type: Boolean, required: true },
+          id: { type: Number, required: true }
+        }],
+        required: true
+      },
+      correctAnswer: { type: Number, required: true }
+    }],
+    required: true
+  })
+  questions: Array<{
+    question: string;
+    points: number;
+    options: Array<{
+      text: string;
+      isCorrect: boolean;
+      id: number;
+    }>;
+    correctAnswer: number;
+  }>;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Course', required: true })
   courseId: Course;
@@ -60,37 +84,8 @@ export class Quiz extends Document {
   @Prop({ default: 0 })
   passingScore: number;
 
-  @Prop({ default: 0 })
+  @Prop({ default: 0, required: false })
   timeLimit?: number; // in minutes
-}
-
-@Schema({ timestamps: true })
-export class Question extends Document {
-  @Prop({ required: true })
-  question: string;
-
-  @Prop({
-    type: [{
-      text: { type: String, required: true },
-      isCorrect: { type: Boolean, required: true },
-      id: { type: Number, required: true }
-    }],
-    required: true
-  })
-  options: Array<{
-    text: string;
-    isCorrect: boolean;
-    id: number;
-  }>;
-
-  @Prop({ required: true })
-  correctAnswer: number; // index of the correct option
-
-  @Prop({ default: 1 })
-  points: number;
-
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Quiz', required: true })
-  quizId: Quiz;
 }
 
 @Schema({ timestamps: true })
@@ -135,6 +130,5 @@ export class QuizAttempt extends Document {
 export const CourseSchema = SchemaFactory.createForClass(Course);
 export const VideoSchema = SchemaFactory.createForClass(Video);
 export const QuizSchema = SchemaFactory.createForClass(Quiz);
-export const QuestionSchema = SchemaFactory.createForClass(Question);
 export const UserProgressSchema = SchemaFactory.createForClass(UserProgress);
 export const QuizAttemptSchema = SchemaFactory.createForClass(QuizAttempt);

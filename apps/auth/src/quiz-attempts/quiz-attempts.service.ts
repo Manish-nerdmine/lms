@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { QuizAttempt, Quiz, Question } from '@app/common/models/lms.schema';
+import { QuizAttempt, Quiz } from '@app/common/models/lms.schema';
 
 @Injectable()
 export class QuizAttemptsService {
@@ -21,7 +21,6 @@ export class QuizAttemptsService {
   ): Promise<QuizAttempt> {
     const quiz = await this.quizModel
       .findById(quizId)
-      .populate('questions')
       .exec();
 
     if (!quiz) {
@@ -43,7 +42,7 @@ export class QuizAttemptsService {
     return attempt.save();
   }
 
-  private calculateScore(questions: Question[], userAnswers: number[]): number {
+  private calculateScore(questions: Quiz['questions'], userAnswers: number[]): number {
     let totalScore = 0;
     let maxScore = 0;
 

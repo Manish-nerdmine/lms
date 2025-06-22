@@ -13,13 +13,13 @@ export class QuizzesService {
   async create(courseId: string, createQuizDto: CreateQuizDto): Promise<Quiz> {
     const quiz = new this.quizModel({
       ...createQuizDto,
-      course: courseId,
+      courseId: courseId,
     });
     return quiz.save();
   }
 
   async findAll(courseId: string): Promise<Quiz[]> {
-    return this.quizModel.find({ course: courseId }).exec();
+    return this.quizModel.find({ courseId }).exec();
   }
 
   async findOne(id: string): Promise<Quiz> {
