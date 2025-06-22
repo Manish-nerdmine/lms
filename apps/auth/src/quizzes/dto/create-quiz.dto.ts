@@ -1,6 +1,21 @@
-import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, Min, ValidateNested, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+
+class QuestionOptionDto {
+  @ApiProperty({ description: 'The option text' })
+  @IsNotEmpty()
+  @IsString()
+  text: string;
+
+  @ApiProperty({ description: 'Whether this option is correct' })
+  @IsBoolean()
+  isCorrect: boolean;
+
+  @ApiProperty({ description: 'Unique identifier for the option' })
+  @IsNumber()
+  id: number;
+}
 
 class QuestionDto {
   @ApiProperty({ description: 'The question text' })
@@ -8,10 +23,11 @@ class QuestionDto {
   @IsString()
   question: string;
 
-  @ApiProperty({ description: 'Array of possible answers', type: [String] })
+  @ApiProperty({ description: 'Array of possible answers', type: [QuestionOptionDto] })
   @IsArray()
-  @IsString({ each: true })
-  options: string[];
+  @ValidateNested({ each: true })
+  @Type(() => QuestionOptionDto)
+  options: QuestionOptionDto[];
 
   @ApiProperty({ description: 'Index of the correct answer (0-based)' })
   @IsNumber()
@@ -48,7 +64,6 @@ export class CreateQuizDto {
 
   @ApiProperty({ description: 'Time limit in minutes', default: 0 })
   @IsNumber()
-  @IsOptional()
   @Min(0)
   timeLimit?: number = 0;
 } 

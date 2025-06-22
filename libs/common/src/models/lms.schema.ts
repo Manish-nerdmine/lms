@@ -44,20 +44,6 @@ export class Video extends Document {
 }
 
 @Schema({ timestamps: true })
-export class Option extends Document {
-  @Prop({ required: true })
-  text: string;
-
-  @Prop({ required: true })
-  isCorrect: boolean;
-
-  @Prop({ default: 0 })
-  id: number;
-
-
-}
-
-@Schema({ timestamps: true })
 export class Quiz extends Document {
   @Prop({ required: true })
   title: string;
@@ -83,8 +69,19 @@ export class Question extends Document {
   @Prop({ required: true })
   question: string;
 
-  @Prop({ type: [Option], required: true })
-  options: Option[];
+  @Prop({
+    type: [{
+      text: { type: String, required: true },
+      isCorrect: { type: Boolean, required: true },
+      id: { type: Number, required: true }
+    }],
+    required: true
+  })
+  options: Array<{
+    text: string;
+    isCorrect: boolean;
+    id: number;
+  }>;
 
   @Prop({ required: true })
   correctAnswer: number; // index of the correct option
