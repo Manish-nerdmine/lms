@@ -19,4 +19,24 @@ export class UsersRepository extends AbstractRepository<UserDocument> {
       password: await  hashPassword(createUserDto.password)
     })
   }
+
+  async find(query: any, projection?: any, options?: any) {
+    return this.model.find(query, projection, options).exec();
+  }
+
+  async countDocuments(query: any) {
+    return this.model.countDocuments(query).exec();
+  }
+
+  async findById(id: string) {
+    return this.model.findById(id).exec();
+  }
+
+  async findByIdAndUpdate(id: string, update: any, options?: any) {
+    return this.model.findByIdAndUpdate(id, update, options).exec();
+  }
+
+  async findByIdAndDelete(id: string) {
+    return this.model.findByIdAndDelete(id).exec();
+  }
 }

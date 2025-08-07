@@ -1,10 +1,12 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import { Injectable, UnprocessableEntityException, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { GetUserDto } from './dto/get-user.dto';
 import { LoginAuthDto } from './dto/loginAuth.dto';
 import { UsersRepository } from './users.repository';
 import { PasscodeService } from '../passcode/passcode.service';
 import { getHashKeys, comparePassword } from '../utils/common.utils'
+import * as XLSX from 'xlsx';
+import { Response } from 'express';
 
 @Injectable()
 export class UsersService {
@@ -55,5 +57,229 @@ export class UsersService {
 
   async getUser(getUserDto: GetUserDto) {
     return this.usersRepository.findOne(getUserDto);
+  }
+
+  async getUserById(id: string) {
+    try {
+      const user = await this.usersRepository.findById(id);
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      return user;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new NotFoundException('User not found');
+    }
+  }
+
+  async updateUser(id: string, updateUserDto: Partial<CreateUserDto>) {
+    try {
+      // Check if user exists
+      const existingUser = await this.usersRepository.findById(id);
+      if (!existingUser) {
+        throw new NotFoundException('User not found');
+      }
+
+      // If email is being updated, check for duplicates
+      if (updateUserDto.email && updateUserDto.email !== existingUser.email) {
+        try {
+          const userWithEmail = await this.usersRepository.findOne({ email: updateUserDto.email });
+          if (userWithEmail && userWithEmail._id.toString() !== id) {
+            throw new ConflictException('Email already exists');
+          }
+        } catch (err) {
+          // Email doesn't exist, continue
+        }
+      }
+
+      // Hash password if it's being updated
+      if (updateUserDto.password) {
+        const { hashPassword } = await import('../utils');
+        updateUserDto.password = await hashPassword(updateUserDto.password);
+      }
+
+      const updatedUser = await this.usersRepository.findByIdAndUpdate(id, updateUserDto, { new: true });
+      return updatedUser;
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof ConflictException) {
+        throw error;
+      }
+      throw new BadRequestException('Error updating user');
+    }
+  }
+
+  async deleteUser(id: string) {
+    try {
+      // Check if user exists
+      const existingUser = await this.usersRepository.findById(id);
+      if (!existingUser) {
+        throw new NotFoundException('User not found');
+      }
+
+      // Delete user
+      await this.usersRepository.findByIdAndDelete(id);
+      
+      return {
+        message: 'User deleted successfully',
+        deletedUserId: id
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException('Error deleting user');
+    }
+  }
+
+  async getAllUsers(page: number = 1, limit: number = 10, search?: string, department?: string) {
+    const skip = (page - 1) * limit;
+    const query: any = {};
+
+    if (search) {
+      query.$or = [
+        { fullName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { companyName: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    if (department) {
+      query.department = department;
+    }
+
+    const users = await this.usersRepository.find(query, {}, { skip, limit });
+    const total = await this.usersRepository.countDocuments(query);
+
+    return {
+      users,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async uploadUsersFromExcel(file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    if (!file.originalname.endsWith('.xlsx') && !file.originalname.endsWith('.xls')) {
+      throw new BadRequestException('Invalid file format. Please upload an Excel file (.xlsx or .xls)');
+    }
+
+    try {
+      const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+
+      if (!data || data.length === 0) {
+        throw new BadRequestException('Excel file is empty');
+      }
+
+      const results = {
+        success: 0,
+        failed: 0,
+        errors: [] as string[],
+      };
+
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i] as any;
+        const rowNumber = i + 2; // +2 because Excel is 1-indexed and we have headers
+
+        try {
+          // Validate required fields
+          if (!row.fullName || !row.email || !row.password) {
+            results.failed++;
+            results.errors.push(`Row ${rowNumber}: Missing required fields (fullName, email, password)`);
+            continue;
+          }
+
+          // Validate email format
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(row.email)) {
+            results.failed++;
+            results.errors.push(`Row ${rowNumber}: Invalid email format`);
+            continue;
+          }
+
+          // Check if user already exists
+          try {
+            await this.usersRepository.findOne({ email: row.email });
+            results.failed++;
+            results.errors.push(`Row ${rowNumber}: Email already exists`);
+            continue;
+          } catch (err) {
+            // User doesn't exist, continue with creation
+          }
+
+          // Create user
+          const userData = {
+            fullName: row.fullName,
+            email: row.email,
+            password: row.password,
+            userType: row.userType || 'user',
+            companyName: row.companyName || '',
+            country: row.country || '',
+            isTermsAccepted: row.isTermsAccepted === 'true' || row.isTermsAccepted === true,
+          };
+
+          await this.usersRepository.createUser(userData);
+          results.success++;
+
+        } catch (error) {
+          results.failed++;
+          results.errors.push(`Row ${rowNumber}: ${error.message}`);
+        }
+      }
+
+      return {
+        message: 'Excel upload completed',
+        results,
+      };
+
+    } catch (error) {
+      throw new BadRequestException(`Error processing Excel file: ${error.message}`);
+    }
+  }
+
+  async downloadTemplate() {
+    const template = [
+      {
+        fullName: 'John Doe',
+        email: 'john.doe@example.com',
+        password: 'password123',
+        userType: 'user',
+        companyName: 'Example Corp',
+        country: 'USA',
+        isTermsAccepted: 'true',
+      },
+      {
+        fullName: 'Jane Smith',
+        email: 'jane.smith@example.com',
+        password: 'password456',
+        userType: 'admin',
+        companyName: 'Sample Inc',
+        country: 'Canada',
+        isTermsAccepted: 'true',
+      },
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(template);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Users Template');
+
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+    return {
+      buffer,
+      filename: 'users_template.xlsx',
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    };
   }
 }
