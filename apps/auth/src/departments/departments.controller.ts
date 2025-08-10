@@ -15,7 +15,7 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('departments')
 @Controller('departments')
-@UseGuards(PasscodeAuthGuard)
+
 export class DepartmentsController {
   constructor(private readonly departmentsService: DepartmentsService) {}
 

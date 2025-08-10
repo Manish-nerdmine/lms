@@ -44,7 +44,6 @@ export class UsersController {
   }
 
   @Get(':id')
-  @UseGuards(PasscodeAuthGuard)
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({ status: 200, description: 'User details' })
   @ApiResponse({ status: 404, description: 'User not found' })
@@ -53,7 +52,7 @@ export class UsersController {
   }
 
   @Patch(':id')
-  @UseGuards(PasscodeAuthGuard)
+
   @ApiOperation({ summary: 'Update user' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
@@ -66,7 +65,7 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @UseGuards(PasscodeAuthGuard)
+
   @ApiOperation({ summary: 'Delete user' })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
@@ -75,7 +74,7 @@ export class UsersController {
   }
 
   @Post('upload-excel')
-  @UseGuards(PasscodeAuthGuard)
+
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -98,7 +97,6 @@ export class UsersController {
   }
 
   @Get('download-template')
-  @UseGuards(PasscodeAuthGuard)
   @ApiOperation({ summary: 'Download Excel template for user upload' })
   async downloadTemplate(@Res() res: Response) {
     const template = await this.usersService.downloadTemplate();

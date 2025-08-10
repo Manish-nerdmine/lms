@@ -15,7 +15,6 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('groups')
 @Controller('groups')
-@UseGuards(PasscodeAuthGuard)
 export class GroupsController {
   constructor(private readonly groupsService: GroupsService) {}
 
