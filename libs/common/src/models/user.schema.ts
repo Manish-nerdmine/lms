@@ -46,6 +46,9 @@ export class UserDocument extends AbstractDocument {
 
   @Prop({ type: SchemaTypes.ObjectId, ref: 'Group', required: false })
   groupId?: Types.ObjectId;
+
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Department', required: false })
+  departmentId?: Types.ObjectId;
 }
 
 export const UserSchema = SchemaFactory.createForClass(UserDocument);

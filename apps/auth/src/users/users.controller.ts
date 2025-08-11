@@ -9,11 +9,15 @@ import { LoginAuthDto } from './dto/loginAuth.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
+import { GroupsService } from '../groups/groups.service';
 
 @ApiTags('Users')
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly groupsService: GroupsService
+  ) {}
 
   @Post()
   async createUser(@Body() createUserDto: CreateUserDto) {
@@ -39,10 +43,10 @@ export class UsersController {
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Query('search') search?: string,
-    @Query('department') department?: string,
+    @Query('departmentId') departmentId?: string,
     @Query('groupId') groupId?: string,
   ) {
-    return this.usersService.getAllUsers(page, limit, search, department, groupId);
+    return this.usersService.getAllUsers(page, limit, search, departmentId, groupId);
   }
 
   @Get('group/:groupId')
@@ -55,6 +59,18 @@ export class UsersController {
     @Query('limit') limit: number = 10,
   ) {
     return this.usersService.getUsersByGroup(groupId, page, limit);
+  }
+
+  @Get('department/:departmentId')
+  @UseGuards(PasscodeAuthGuard)
+  @ApiOperation({ summary: 'Get users by department ID' })
+  @ApiResponse({ status: 200, description: 'List of users in the department' })
+  async getUsersByDepartment(
+    @Param('departmentId') departmentId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.usersService.getUsersByDepartment(departmentId, page, limit);
   }
 
   @Get(':id')
@@ -103,7 +119,10 @@ export class UsersController {
       },
     },
   })
-  @ApiOperation({ summary: 'Upload users from Excel file' })
+  @ApiOperation({ 
+    summary: 'Upload users from Excel file',
+    description: 'Upload users from Excel file. Required columns: fullName, email, password. Optional columns: userType, companyName, country, isTermsAccepted, groupId, departmentId. groupId and departmentId must be valid MongoDB ObjectIds of existing groups and departments.'
+  })
   @ApiResponse({ status: 201, description: 'Users uploaded successfully' })
   @ApiResponse({ status: 400, description: 'Invalid file format or data' })
   async uploadUsersFromExcel(@UploadedFile() file: Express.Multer.File) {
@@ -111,7 +130,10 @@ export class UsersController {
   }
 
   @Get('download-template')
-  @ApiOperation({ summary: 'Download Excel template for user upload' })
+  @ApiOperation({ 
+    summary: 'Download Excel template for user upload',
+    description: 'Download an Excel template with sample data including all required and optional fields: fullName, email, password, userType, companyName, country, isTermsAccepted, groupId, departmentId'
+  })
   async downloadTemplate(@Res() res: Response) {
     const template = await this.usersService.downloadTemplate();
     
@@ -121,5 +143,16 @@ export class UsersController {
     });
     
     res.send(template.buffer);
+  }
+
+  @Get('available-groups')
+  @UseGuards(PasscodeAuthGuard)
+  @ApiOperation({ 
+    summary: 'Get all available groups for Excel upload reference',
+    description: 'Get a list of all groups with their IDs, names, and other details to help users fill the groupId field in Excel uploads'
+  })
+  @ApiResponse({ status: 200, description: 'List of available groups' })
+  async getAvailableGroups() {
+    return this.groupsService.findAll();
   }
 }

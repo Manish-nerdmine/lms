@@ -33,4 +33,9 @@ export class CreateUserDto {
   @IsOptional()
   @IsMongoId()
   groupId?: string;
+
+  @ApiProperty({ example: '657e902c4b628d1f0fc8f09e', description: 'Department ID (optional)', required: false })
+  @IsOptional()
+  @IsMongoId()
+  departmentId?: string;
 }

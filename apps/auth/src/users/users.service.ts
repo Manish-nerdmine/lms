@@ -1,4 +1,6 @@
 import { Injectable, UnprocessableEntityException, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { GetUserDto } from './dto/get-user.dto';
@@ -8,18 +10,43 @@ import { PasscodeService } from '../passcode/passcode.service';
 import { getHashKeys, comparePassword } from '../utils/common.utils'
 import * as XLSX from 'xlsx';
 import { Response } from 'express';
+import { Group } from '@app/common/models/group.schema';
+import { Department } from '@app/common/models/department.schema';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly usersRepository: UsersRepository, 
-    private readonly passcodeService: PasscodeService
+  constructor(
+    private readonly usersRepository: UsersRepository, 
+    private readonly passcodeService: PasscodeService,
+    @InjectModel(Group.name) private readonly groupModel: Model<Group>,
+    @InjectModel(Department.name) private readonly departmentModel: Model<Department>
   ) {}
 
   async create(createUserDto: CreateUserDto) {
     try {
       await this.validateCreateUserDto(createUserDto);
+      
+      // If groupId is provided, validate it exists
+      if (createUserDto.groupId) {
+        const group = await this.groupModel.findById(createUserDto.groupId).exec();
+        if (!group) {
+          throw new NotFoundException('Group not found');
+        }
+      }
+
+      // If departmentId is provided, validate it exists
+      if (createUserDto.departmentId) {
+        const department = await this.departmentModel.findById(createUserDto.departmentId).exec();
+        if (!department) {
+          throw new NotFoundException('Department not found');
+        }
+      }
+
       return await this.usersRepository.createUser(createUserDto);
     } catch (err) {
+      if (err instanceof NotFoundException) {
+        throw err;
+      }
       throw new UnprocessableEntityException(err.message);
     }
   }
@@ -95,6 +122,22 @@ export class UsersService {
         }
       }
 
+      // If groupId is provided, validate it exists
+      if (updateUserDto.groupId) {
+        const group = await this.groupModel.findById(updateUserDto.groupId).exec();
+        if (!group) {
+          throw new NotFoundException('Group not found');
+        }
+      }
+
+      // If departmentId is provided, validate it exists
+      if (updateUserDto.departmentId) {
+        const department = await this.departmentModel.findById(updateUserDto.departmentId).exec();
+        if (!department) {
+          throw new NotFoundException('Department not found');
+        }
+      }
+
       // Hash password if it's being updated
       if (updateUserDto.password) {
         const { hashPassword } = await import('../utils');
@@ -134,7 +177,7 @@ export class UsersService {
     }
   }
 
-  async getAllUsers(page: number = 1, limit: number = 10, search?: string, department?: string, groupId?: string) {
+  async getAllUsers(page: number = 1, limit: number = 10, search?: string, departmentId?: string, groupId?: string) {
     const skip = (page - 1) * limit;
     const query: any = {};
 
@@ -146,8 +189,8 @@ export class UsersService {
       ];
     }
 
-    if (department) {
-      query.department = department;
+    if (departmentId) {
+      query.departmentId = departmentId;
     }
 
     if (groupId) {
@@ -171,6 +214,24 @@ export class UsersService {
   async getUsersByGroup(groupId: string, page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
     const query = { groupId };
+
+    const users = await this.usersRepository.find(query, {}, { skip, limit });
+    const total = await this.usersRepository.countDocuments(query);
+
+    return {
+      users,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getUsersByDepartment(departmentId: string, page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+    const query = { departmentId };
 
     const users = await this.usersRepository.find(query, {}, { skip, limit });
     const total = await this.usersRepository.countDocuments(query);
@@ -231,6 +292,40 @@ export class UsersService {
             continue;
           }
 
+          // Validate groupId format if provided
+          if (row.groupId && !/^[0-9a-fA-F]{24}$/.test(row.groupId)) {
+            results.failed++;
+            results.errors.push(`Row ${rowNumber}: Invalid groupId format (must be a valid MongoDB ObjectId)`);
+            continue;
+          }
+
+          // Validate group exists if groupId is provided
+          if (row.groupId) {
+            const group = await this.groupModel.findById(row.groupId).exec();
+            if (!group) {
+              results.failed++;
+              results.errors.push(`Row ${rowNumber}: Group with ID ${row.groupId} does not exist`);
+              continue;
+            }
+          }
+
+          // Validate departmentId format if provided
+          if (row.departmentId && !/^[0-9a-fA-F]{24}$/.test(row.departmentId)) {
+            results.failed++;
+            results.errors.push(`Row ${rowNumber}: Invalid departmentId format (must be a valid MongoDB ObjectId)`);
+            continue;
+          }
+
+          // Validate department exists if departmentId is provided
+          if (row.departmentId) {
+            const department = await this.departmentModel.findById(row.departmentId).exec();
+            if (!department) {
+              results.failed++;
+              results.errors.push(`Row ${rowNumber}: Department with ID ${row.departmentId} does not exist`);
+              continue;
+            }
+          }
+
           // Check if user already exists
           try {
             await this.usersRepository.findOne({ email: row.email });
@@ -250,6 +345,8 @@ export class UsersService {
             companyName: row.companyName || '',
             country: row.country || '',
             isTermsAccepted: row.isTermsAccepted === 'true' || row.isTermsAccepted === true,
+            groupId: row.groupId || undefined,
+            departmentId: row.departmentId || undefined,
           };
 
           await this.usersRepository.createUser(userData);
@@ -281,6 +378,8 @@ export class UsersService {
         companyName: 'Example Corp',
         country: 'USA',
         isTermsAccepted: 'true',
+        groupId: '657e902c4b628d1f0fc8f09e',
+        departmentId: '657e902c4b628d1f0fc8f09f',
       },
       {
         fullName: 'Jane Smith',
@@ -290,6 +389,8 @@ export class UsersService {
         companyName: 'Sample Inc',
         country: 'Canada',
         isTermsAccepted: 'true',
+        groupId: '',
+        departmentId: '',
       },
     ];
 
