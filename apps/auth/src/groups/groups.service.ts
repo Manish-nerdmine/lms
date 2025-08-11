@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Group } from '@app/common/models/group.schema';
 import { Course } from '@app/common/models/lms.schema';
+import { UserDocument } from '@app/common/models/user.schema';
 import { CreateGroupDto } from './dto/create-group.dto';
 
 @Injectable()
@@ -10,6 +11,7 @@ export class GroupsService {
   constructor(
     @InjectModel(Group.name) private readonly groupModel: Model<Group>,
     @InjectModel(Course.name) private readonly courseModel: Model<Course>,
+    @InjectModel(UserDocument.name) private readonly userModel: Model<UserDocument>,
   ) {}
 
   async create(createGroupDto: CreateGroupDto): Promise<Group> {
@@ -150,6 +152,7 @@ export class GroupsService {
     const updatedUserIds = [...group.userIds, ...newUserIds];
     const updatedCurrentParticipants = updatedUserIds.length;
 
+    // Update group
     const updatedGroup = await this.groupModel
       .findByIdAndUpdate(
         groupId,
@@ -162,6 +165,12 @@ export class GroupsService {
       .populate('courseId', 'title description')
       .populate('departmentId', 'name')
       .exec();
+
+    // Update users' groupId field
+    await this.userModel.updateMany(
+      { _id: { $in: newUserIds } },
+      { groupId: groupId }
+    );
 
     return updatedGroup;
   }
@@ -173,6 +182,7 @@ export class GroupsService {
     const updatedUserIds = group.userIds.filter(id => !userIds.includes(id));
     const updatedCurrentParticipants = updatedUserIds.length;
 
+    // Update group
     const updatedGroup = await this.groupModel
       .findByIdAndUpdate(
         groupId,
@@ -185,6 +195,12 @@ export class GroupsService {
       .populate('courseId', 'title description')
       .populate('departmentId', 'name')
       .exec();
+
+    // Remove groupId from users
+    await this.userModel.updateMany(
+      { _id: { $in: userIds } },
+      { $unset: { groupId: 1 } }
+    );
 
     return updatedGroup;
   }

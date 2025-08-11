@@ -7,6 +7,7 @@ import { CurrentUser, UserDocument, PasscodeAuthGuard } from '@app/common';
 import { LoginAuthDto } from './dto/loginAuth.dto';
 
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 
 @ApiTags('Users')
@@ -39,8 +40,21 @@ export class UsersController {
     @Query('limit') limit: number = 10,
     @Query('search') search?: string,
     @Query('department') department?: string,
+    @Query('groupId') groupId?: string,
   ) {
-    return this.usersService.getAllUsers(page, limit, search, department);
+    return this.usersService.getAllUsers(page, limit, search, department, groupId);
+  }
+
+  @Get('group/:groupId')
+  @UseGuards(PasscodeAuthGuard)
+  @ApiOperation({ summary: 'Get users by group ID' })
+  @ApiResponse({ status: 200, description: 'List of users in the group' })
+  async getUsersByGroup(
+    @Param('groupId') groupId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.usersService.getUsersByGroup(groupId, page, limit);
   }
 
   @Get(':id')
@@ -59,7 +73,7 @@ export class UsersController {
   @ApiResponse({ status: 409, description: 'Email already exists' })
   async updateUser(
     @Param('id') id: string,
-    @Body() updateUserDto: Partial<CreateUserDto>,
+    @Body() updateUserDto: UpdateUserDto,
   ) {
     return this.usersService.updateUser(id, updateUserDto);
   }

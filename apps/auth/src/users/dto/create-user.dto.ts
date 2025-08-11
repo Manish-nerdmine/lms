@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsBoolean, MinLength, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsBoolean, MinLength, IsString, IsOptional, IsMongoId } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { Types } from 'mongoose';
@@ -28,4 +28,9 @@ export class CreateUserDto {
   @ApiProperty({ example: true, description: 'User has accepted terms and conditions' })
   @IsBoolean()
   isTermsAccepted: boolean;
+
+  @ApiProperty({ example: '657e902c4b628d1f0fc8f09e', description: 'Group ID (optional)', required: false })
+  @IsOptional()
+  @IsMongoId()
+  groupId?: string;
 }

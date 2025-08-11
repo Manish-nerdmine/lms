@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AbstractRepository, UserDocument } from '@app/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { hashPassword, comparePassword } from '../utils';
 import { CreateUserDto } from './dto/create-user.dto';
 
@@ -14,10 +14,17 @@ export class UsersRepository extends AbstractRepository<UserDocument> {
   }
 
   async createUser(createUserDto: CreateUserDto){
-    return await this.create({
+    const userData: any = {
       ...createUserDto,
-      password: await  hashPassword(createUserDto.password)
-    })
+      password: await hashPassword(createUserDto.password)
+    };
+    
+    // Convert groupId string to ObjectId if provided
+    if (createUserDto.groupId) {
+      userData.groupId = new Types.ObjectId(createUserDto.groupId);
+    }
+    
+    return await this.create(userData);
   }
 
   async find(query: any, projection?: any, options?: any) {
@@ -33,6 +40,11 @@ export class UsersRepository extends AbstractRepository<UserDocument> {
   }
 
   async findByIdAndUpdate(id: string, update: any, options?: any) {
+    // Convert groupId string to ObjectId if provided
+    if (update.groupId) {
+      update.groupId = new Types.ObjectId(update.groupId);
+    }
+    
     return this.model.findByIdAndUpdate(id, update, options).exec();
   }
 

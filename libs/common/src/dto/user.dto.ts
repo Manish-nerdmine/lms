@@ -3,4 +3,5 @@ export interface UserDto {
   email: string;
   phoneNumber: string;
   password: string;
+  groupId?: string;
 }

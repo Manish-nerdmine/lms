@@ -24,6 +24,11 @@ export class UserDocument extends AbstractDocument {
   @Prop({ type: String, lowercase: true, unique: true, maxLength: 255, sparse: true })
   email?: string;
 
+  @Prop({ type: String, lowercase: true, unique: true, maxLength: 255, sparse: true })
+  phone?: string;
+
+  
+
   @Prop({ type: String, required: false, maxLength: 1000, select: false, default: null })
   password?: string;
 
@@ -38,7 +43,9 @@ export class UserDocument extends AbstractDocument {
 
   @Prop({ type: String, maxLength: 200 })
   country?: string;
-;
+
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Group', required: false })
+  groupId?: Types.ObjectId;
 }
 
 export const UserSchema = SchemaFactory.createForClass(UserDocument);

@@ -1,5 +1,6 @@
 import { Injectable, UnprocessableEntityException, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { GetUserDto } from './dto/get-user.dto';
 import { LoginAuthDto } from './dto/loginAuth.dto';
 import { UsersRepository } from './users.repository';
@@ -74,7 +75,7 @@ export class UsersService {
     }
   }
 
-  async updateUser(id: string, updateUserDto: Partial<CreateUserDto>) {
+  async updateUser(id: string, updateUserDto: UpdateUserDto) {
     try {
       // Check if user exists
       const existingUser = await this.usersRepository.findById(id);
@@ -133,7 +134,7 @@ export class UsersService {
     }
   }
 
-  async getAllUsers(page: number = 1, limit: number = 10, search?: string, department?: string) {
+  async getAllUsers(page: number = 1, limit: number = 10, search?: string, department?: string, groupId?: string) {
     const skip = (page - 1) * limit;
     const query: any = {};
 
@@ -148,6 +149,28 @@ export class UsersService {
     if (department) {
       query.department = department;
     }
+
+    if (groupId) {
+      query.groupId = groupId;
+    }
+
+    const users = await this.usersRepository.find(query, {}, { skip, limit });
+    const total = await this.usersRepository.countDocuments(query);
+
+    return {
+      users,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getUsersByGroup(groupId: string, page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+    const query = { groupId };
 
     const users = await this.usersRepository.find(query, {}, { skip, limit });
     const total = await this.usersRepository.countDocuments(query);
