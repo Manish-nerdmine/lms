@@ -36,7 +36,7 @@ export class UsersController {
   }
 
   @Get('all')
-  @UseGuards(PasscodeAuthGuard)
+ // @UseGuards(PasscodeAuthGuard)
   @ApiOperation({ summary: 'Get all users' })
   @ApiResponse({ status: 200, description: 'List of all users' })
   async getAllUsers(
