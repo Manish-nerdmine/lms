@@ -51,4 +51,8 @@ export class UsersRepository extends AbstractRepository<UserDocument> {
   async findByIdAndDelete(id: string) {
     return this.model.findByIdAndDelete(id).exec();
   }
+
+  async aggregate(pipeline: any[]) {
+    return this.model.aggregate(pipeline).exec();
+  }
 }

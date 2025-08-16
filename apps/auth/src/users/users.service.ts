@@ -179,10 +179,10 @@ export class UsersService {
 
   async getAllUsers(page: number = 1, limit: number = 10, search?: string, departmentId?: string, groupId?: string) {
     const skip = (page - 1) * limit;
-    const query: any = {};
+    const matchQuery: any = {};
 
     if (search) {
-      query.$or = [
+      matchQuery.$or = [
         { fullName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
         { companyName: { $regex: search, $options: 'i' } },
@@ -190,15 +190,56 @@ export class UsersService {
     }
 
     if (departmentId) {
-      query.departmentId = departmentId;
+      matchQuery.departmentId = departmentId;
     }
 
     if (groupId) {
-      query.groupId = groupId;
+      matchQuery.groupId = groupId;
     }
 
-    const users = await this.usersRepository.find(query, {}, { skip, limit });
-    const total = await this.usersRepository.countDocuments(query);
+    // Use aggregation pipeline to lookup userType details
+    const pipeline = [
+      { $match: matchQuery },
+      {
+        $lookup: {
+          from: 'usertypedocuments', // MongoDB collection name for UserType
+          localField: 'userType',
+          foreignField: 'code',
+          as: 'userTypeDetails'
+        }
+      },
+      {
+        $addFields: {
+          userTypeName: { $arrayElemAt: ['$userTypeDetails.name', 0] },
+          userTypeDescription: { $arrayElemAt: ['$userTypeDetails.description', 0] }
+        }
+      },
+      {
+        $project: {
+          fullName: 1,
+          email: 1,
+          phone: 1,
+          companyName: 1,
+          userType: 1,
+          userTypeName: 1,
+          userTypeDescription: 1,
+          departmentId: 1,
+          groupId: 1,
+          companyId: 1,
+          country: 1,
+          isTermsAccepted: 1,
+          lastLoggedIn: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          userTypeDetails: 0 // Remove the array, keep only the extracted fields
+        }
+      },
+      { $skip: skip },
+      { $limit: limit }
+    ];
+
+    const users = await this.usersRepository.aggregate(pipeline);
+    const total = await this.usersRepository.countDocuments(matchQuery);
 
     return {
       users,
