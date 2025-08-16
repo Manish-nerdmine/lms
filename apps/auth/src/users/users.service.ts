@@ -196,7 +196,7 @@ export class UsersService {
         $lookup: {
           from: 'usertypedocuments', // MongoDB collection name for UserType
           localField: 'userType',
-          foreignField: 'code',
+          foreignField: '_id',
           as: 'userTypeDetails'
         }
       },
