@@ -197,7 +197,7 @@ export class UsersService {
       matchQuery.groupId = groupId;
     }
 
-    // Use aggregation pipeline to lookup userType details
+    // Use aggregation pipeline to lookup userType and group details
     const pipeline = [
       { $match: matchQuery },
       {
@@ -209,9 +209,19 @@ export class UsersService {
         }
       },
       {
+        $lookup: {
+          from: 'groups', // MongoDB collection name for Group
+          localField: 'groupId',
+          foreignField: '_id',
+          as: 'groupDetails'
+        }
+      },
+      {
         $addFields: {
           userTypeName: { $arrayElemAt: ['$userTypeDetails.name', 0] },
-          userTypeDescription: { $arrayElemAt: ['$userTypeDetails.description', 0] }
+          userTypeDescription: { $arrayElemAt: ['$userTypeDetails.description', 0] },
+          groupName: { $arrayElemAt: ['$groupDetails.name', 0] },
+          groupDescription: { $arrayElemAt: ['$groupDetails.description', 0] }
         }
       },
       {
@@ -225,13 +235,16 @@ export class UsersService {
           userTypeDescription: 1,
           departmentId: 1,
           groupId: 1,
+          groupName: 1,
+          groupDescription: 1,
           companyId: 1,
           country: 1,
           isTermsAccepted: 1,
           lastLoggedIn: 1,
           createdAt: 1,
           updatedAt: 1,
-          userTypeDetails: 0 // Remove the array, keep only the extracted fields
+          userTypeDetails: 0, // Remove the array, keep only the extracted fields
+          groupDetails: 0 // Remove the array, keep only the extracted fields
         }
       },
       { $skip: skip },
