@@ -35,12 +35,12 @@ export class UsersService {
       }
 
       // If departmentId is provided, validate it exists
-      if (createUserDto.departmentId) {
-        const department = await this.departmentModel.findById(createUserDto.departmentId).exec();
-        if (!department) {
-          throw new NotFoundException('Department not found');
-        }
-      }
+      // if (createUserDto.departmentId) {
+      //   const department = await this.departmentModel.findById(createUserDto.departmentId).exec();
+      //   if (!department) {
+      //     throw new NotFoundException('Department not found');
+      //   }
+      // }
 
       return await this.usersRepository.createUser(createUserDto);
     } catch (err) {
@@ -130,19 +130,7 @@ export class UsersService {
         }
       }
 
-      // If departmentId is provided, validate it exists
-      if (updateUserDto.departmentId) {
-        const department = await this.departmentModel.findById(updateUserDto.departmentId).exec();
-        if (!department) {
-          throw new NotFoundException('Department not found');
-        }
-      }
 
-      // Hash password if it's being updated
-      if (updateUserDto.password) {
-        const { hashPassword } = await import('../utils');
-        updateUserDto.password = await hashPassword(updateUserDto.password);
-      }
 
       const updatedUser = await this.usersRepository.findByIdAndUpdate(id, updateUserDto, { new: true });
       return updatedUser;
@@ -177,9 +165,13 @@ export class UsersService {
     }
   }
 
-  async getAllUsers(page: number = 1, limit: number = 10, search?: string, departmentId?: string, groupId?: string) {
+  async getAllUsers(page: number = 1, limit: number = 10, search?: string) {
+   
     const skip = (page - 1) * limit;
-    const matchQuery: any = {};
+    const matchQuery: any = {
+      status: true,
+      deleted: false,
+    };
 
     if (search) {
       matchQuery.$or = [
@@ -189,13 +181,13 @@ export class UsersService {
       ];
     }
 
-    if (departmentId) {
-      matchQuery.departmentId = departmentId;
-    }
+    // if (departmentId) {
+    //   matchQuery.departmentId = departmentId;
+    // }
 
-    if (groupId) {
-      matchQuery.groupId = groupId;
-    }
+    // if (groupId) {
+    //   matchQuery.groupId = groupId;
+    // }
 
     // Use aggregation pipeline to lookup userType and group details
     const pipeline = [
@@ -209,6 +201,13 @@ export class UsersService {
         }
       },
       {
+        $unwind: {
+          path: '$userTypeDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+     
+      {
         $lookup: {
           from: 'groups', // MongoDB collection name for Group
           localField: 'groupId',
@@ -217,52 +216,62 @@ export class UsersService {
         }
       },
       {
-        $addFields: {
-          userTypeName: { $arrayElemAt: ['$userTypeDetails.name', 0] },
-          userTypeDescription: { $arrayElemAt: ['$userTypeDetails.description', 0] },
-          groupName: { $arrayElemAt: ['$groupDetails.name', 0] },
-          groupDescription: { $arrayElemAt: ['$groupDetails.description', 0] }
+        $unwind: {
+          path: '$groupDetails',
+          preserveNullAndEmptyArrays: true
         }
       },
-      {
-        $project: {
-          fullName: 1,
-          email: 1,
-          phone: 1,
-          companyName: 1,
-          userType: 1,
-          userTypeName: 1,
-          userTypeDescription: 1,
-          departmentId: 1,
-          groupId: 1,
-          groupName: 1,
-          groupDescription: 1,
-          companyId: 1,
-          country: 1,
-          isTermsAccepted: 1,
-          lastLoggedIn: 1,
-          createdAt: 1,
-          updatedAt: 1,
-          userTypeDetails: 0, // Remove the array, keep only the extracted fields
-          groupDetails: 0 // Remove the array, keep only the extracted fields
-        }
-      },
+      // {
+      //   $addFields: {
+      //     userTypeName: { $arrayElemAt: ['$userTypeDetails.name', 0] },
+      //     userTypeDescription: { $arrayElemAt: ['$userTypeDetails.description', 0] },
+      //     groupName: { $arrayElemAt: ['$groupDetails.name', 0] },
+      //     groupDescription: { $arrayElemAt: ['$groupDetails.description', 0] }
+      //   }
+      // },
+              {
+          $project: {
+            fullName: 1,
+            email: 1,
+            phone: 1,
+            companyName: 1,
+            userType: 1,
+            userTypeName: '$userTypeDetails.name',
+            userTypeDescription: '$userTypeDetails.description',
+            departmentId: 1,
+            groupId: 1,
+            companyId: 1,
+            country: 1,
+            isTermsAccepted: 1,
+            lastLoggedIn: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            userRole: '$userTypeDetails.name',
+            groupName: '$groupDetails.name',
+            
+          }
+        },
       { $skip: skip },
       { $limit: limit }
     ];
 
-    const users = await this.usersRepository.aggregate(pipeline);
-    const total = await this.usersRepository.countDocuments(matchQuery);
+    try {
+      const users = await this.usersRepository.aggregate(pipeline);
+      const total = await this.usersRepository.countDocuments(matchQuery);
 
-    return {
-      users,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
-    };
+      return {
+        users,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      console.error('Aggregation error:', error);
+      throw new Error(`Failed to fetch users: ${error.message}`);
+    }
   }
 
   async getUsersByGroup(groupId: string, page: number = 1, limit: number = 10) {

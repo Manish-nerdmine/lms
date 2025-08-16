@@ -13,8 +13,8 @@ export class UserDocument extends AbstractDocument {
   companyId?: number;
 
 
-  @Prop({ type: String, enum: ['user', 'admin'], default: 'user' })
-  userType: string;
+  @Prop( { type: SchemaTypes.ObjectId, ref: 'UserTypeDocument', required: true })
+  userType: Types.ObjectId;
 
 
   @Prop({ type: String, required: true, maxLength: 100 })

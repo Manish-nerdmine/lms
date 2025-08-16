@@ -21,9 +21,9 @@ export class CreateUserDto {
 
 
   @ApiProperty({ example: 'manish12', description: 'User password' })
-  @IsNotEmpty()
+  @IsOptional()
   @MinLength(6)
-  password: string;
+  password?: string;
 
   @ApiProperty({ example: true, description: 'User has accepted terms and conditions' })
   @IsBoolean()

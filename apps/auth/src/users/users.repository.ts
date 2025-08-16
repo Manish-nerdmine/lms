@@ -16,7 +16,7 @@ export class UsersRepository extends AbstractRepository<UserDocument> {
   async createUser(createUserDto: CreateUserDto){
     const userData: any = {
       ...createUserDto,
-      password: await hashPassword(createUserDto.password)
+      // password: await hashPassword(createUserDto.password)
     };
     
     // Convert groupId string to ObjectId if provided
