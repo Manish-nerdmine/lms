@@ -5,7 +5,7 @@ import { Types } from 'mongoose';
 
 export class CreateUserDto {
   //@ApiProperty({ example: '657e902c4b628d1f0fc8f09e', description: 'User Type ID' })
-  @ApiProperty({ example: 'user', description: 'Type of user (user/admin)', enum: ['user', 'admin'] })
+  @ApiProperty({ example: 'user', description: 'Type of user (user/admin)' })
   @IsString()
   @IsNotEmpty()
   userType: string;
@@ -20,11 +20,6 @@ export class CreateUserDto {
   email: string;
 
 
-  @ApiProperty({ example: 'manish12', description: 'User password' })
-  @IsOptional()
-  @MinLength(6)
-  password?: string;
-
   @ApiProperty({ example: true, description: 'User has accepted terms and conditions' })
   @IsBoolean()
   isTermsAccepted: boolean;
@@ -33,9 +28,4 @@ export class CreateUserDto {
   @IsOptional()
   @IsMongoId()
   groupId?: string;
-
-  @ApiProperty({ example: '657e902c4b628d1f0fc8f09e', description: 'Department ID (optional)', required: false })
-  @IsOptional()
-  @IsMongoId()
-  departmentId?: string;
 }

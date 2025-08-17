@@ -13,8 +13,8 @@ export class UserDocument extends AbstractDocument {
   companyId?: number;
 
 
-  @Prop( { type: SchemaTypes.ObjectId, ref: 'UserTypeDocument', required: true })
-  userType: Types.ObjectId;
+  @Prop( { Type: String })
+  userType: string;
 
 
   @Prop({ type: String, required: true, maxLength: 100 })

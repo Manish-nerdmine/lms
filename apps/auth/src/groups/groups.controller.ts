@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import { CreateGroupDto } from './dto/create-group.dto';
@@ -31,6 +32,16 @@ export class GroupsController {
   @ApiOperation({ summary: 'Get all groups' })
   findAll() {
     return this.groupsService.findAll();
+  }
+
+  @Get('all-with-stats')
+  @ApiOperation({ summary: 'Get all groups with user statistics' })
+  @ApiResponse({ status: 200, description: 'List of all groups with user counts' })
+  findAllWithStats(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.groupsService.findAllWithStats(page, limit);
   }
 
   @Get(':id')

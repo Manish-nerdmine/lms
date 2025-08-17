@@ -42,9 +42,9 @@ export class UsersController {
   async getAllUsers(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
-    @Query('search') search?: string,
+   // @Query('search') search?: string,
   ) {
-    return this.usersService.getAllUsers(page, limit, search);
+    return this.usersService.getAllUsers(page, limit);
   }
 
   @Get('group/:groupId')
