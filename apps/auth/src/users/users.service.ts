@@ -192,20 +192,20 @@ export class UsersService {
     // Use aggregation pipeline to lookup userType and group details
     const pipeline = [
       { $match: matchQuery },
-      {
-        $lookup: {
-          from: 'usertypedocuments', // MongoDB collection name for UserType
-          localField: 'userType',
-          foreignField: '_id',
-          as: 'userTypeDetails'
-        }
-      },
-      {
-        $unwind: {
-          path: '$userTypeDetails',
-          preserveNullAndEmptyArrays: true
-        }
-      },
+      // {
+      //   $lookup: {
+      //     from: 'usertypedocuments', // MongoDB collection name for UserType
+      //     localField: 'userType',
+      //     foreignField: '_id',
+      //     as: 'userTypeDetails'
+      //   }
+      // },
+      // {
+      //   $unwind: {
+      //     path: '$userTypeDetails',
+      //     preserveNullAndEmptyArrays: true
+      //   }
+      // },
      
       {
         $lookup: {
@@ -236,8 +236,8 @@ export class UsersService {
             phone: 1,
             companyName: 1,
             userType: 1,
-            userTypeName: '$userTypeDetails.name',
-            userTypeDescription: '$userTypeDetails.description',
+            // userTypeName: '$userTypeDetails.name',
+            // userTypeDescription: '$userTypeDetails.description',
             departmentId: 1,
             groupId: 1,
             companyId: 1,
@@ -246,7 +246,7 @@ export class UsersService {
             lastLoggedIn: 1,
             createdAt: 1,
             updatedAt: 1,
-            userRole: '$userTypeDetails.name',
+            // userRole: '$userTypeDetails.name',
             groupName: '$groupDetails.name',
             
           }
