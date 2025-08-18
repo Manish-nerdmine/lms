@@ -1,16 +1,21 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Group } from '@app/common/models/group.schema';
 import { UserDocument } from '@app/common/models/user.schema';
+import { Course } from '@app/common/models/lms.schema';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
+import { AssignCourseDto } from './dto/assign-course.dto';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class GroupsService {
   constructor(
     @InjectModel(Group.name) private readonly groupModel: Model<Group>,
     @InjectModel(UserDocument.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(Course.name) private readonly courseModel: Model<Course>,
+    private readonly emailService: EmailService,
   ) {}
 
   async create(createGroupDto: CreateGroupDto): Promise<Group> {
@@ -165,6 +170,35 @@ export class GroupsService {
     return group;
   }
 
+  async findOneWithUsers(id: string): Promise<any> {
+    const pipeline = [
+      {
+        $match: { _id: new Types.ObjectId(id) }
+      },
+      {
+        $lookup: {
+          from: 'userdocuments',
+          localField: '_id',
+          foreignField: 'groupId',
+          as: 'users'
+        }
+      },
+      {
+        $addFields: {
+          totalUsers: { $size: '$users' }
+        }
+      }
+    ];
+
+    const result = await this.groupModel.aggregate(pipeline).exec();
+    
+    if (!result || result.length === 0) {
+      throw new NotFoundException('Group not found');
+    }
+
+    return result[0];
+  }
+
   async update(id: string, updateGroupDto: UpdateGroupDto): Promise<Group> {
     const group = await this.findOne(id);
 
@@ -215,6 +249,69 @@ export class GroupsService {
       totalUsers: userCount,
       // You'll need to implement completion rate logic based on your requirements
       completionRate: 0 // Placeholder value
+    };
+  }
+
+  async assignCourseToGroup(groupId: string, assignCourseDto: AssignCourseDto): Promise<any> {
+    // Verify group exists
+    const group = await this.groupModel.findById(groupId).exec();
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    // Verify course exists
+    const course = await this.courseModel.findById(assignCourseDto.courseId).exec();
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    // Check if course is already assigned to the group
+    if (group.courses && group.courses.includes(assignCourseDto.courseId)) {
+      throw new ConflictException('Course is already assigned to this group');
+    }
+
+    // Add course to group
+    const updatedGroup = await this.groupModel.findByIdAndUpdate(
+      groupId,
+      { $push: { courses: assignCourseDto.courseId } },
+      { new: true }
+    ).exec();
+
+    // Send email notifications if requested
+    if (assignCourseDto.sendEmailNotifications) {
+      try {
+        // Get all users in the group
+        const users = await this.userModel.find({ groupId }).exec();
+        
+        if (users.length > 0) {
+          const usersWithEmail = users.filter(user => user.email);
+          
+          if (usersWithEmail.length > 0) {
+            await this.emailService.sendBulkCourseAssignmentEmails(
+              usersWithEmail.map(user => ({
+                email: user.email,
+                fullName: user.fullName
+              })),
+              course.title,
+              group.name
+            );
+          }
+        }
+      } catch (error) {
+        // Log error but don't fail the assignment
+        console.error('Failed to send email notifications:', error.message);
+      }
+    }
+
+    return {
+      message: 'Course assigned to group successfully',
+      group: updatedGroup,
+      course: {
+        id: course._id,
+        title: course.title,
+        description: course.description
+      },
+      emailsSent: assignCourseDto.sendEmailNotifications ? 'Yes' : 'No'
     };
   }
 } 

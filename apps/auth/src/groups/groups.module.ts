@@ -5,6 +5,7 @@ import { GroupsController } from './groups.controller';
 import { Group, GroupSchema } from '@app/common/models/group.schema';
 import { UserDocument, UserSchema } from '@app/common/models/user.schema';
 import { Course, CourseSchema, UserProgress, UserProgressSchema } from '@app/common/models/lms.schema';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { Course, CourseSchema, UserProgress, UserProgressSchema } from '@app/com
       { name: Course.name, schema: CourseSchema },
       { name: UserProgress.name, schema: UserProgressSchema }
     ]),
+    EmailModule,
   ],
   controllers: [GroupsController],
   providers: [GroupsService],

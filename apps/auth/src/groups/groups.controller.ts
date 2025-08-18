@@ -12,6 +12,7 @@ import {
 import { GroupsService } from './groups.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
+import { AssignCourseDto } from './dto/assign-course.dto';
 import { PasscodeAuthGuard } from '@app/common/auth/passcode-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
@@ -48,7 +49,27 @@ export class GroupsController {
   @ApiOperation({ summary: 'Get a specific group' })
   @ApiResponse({ status: 404, description: 'Group not found' })
   findOne(@Param('id') id: string) {
-    return this.groupsService.findOne(id);
+    return this.groupsService.findOneWithUsers(id);
+  }
+
+  @Get(':id/with-users')
+  @ApiOperation({ summary: 'Get a specific group with associated users' })
+  @ApiResponse({ status: 200, description: 'Group with users data' })
+  @ApiResponse({ status: 404, description: 'Group not found' })
+  findOneWithUsers(@Param('id') id: string) {
+    return this.groupsService.findOneWithUsers(id);
+  }
+
+  @Post(':id/assign-course')
+  @ApiOperation({ summary: 'Assign a course to a group and send email notifications' })
+  @ApiResponse({ status: 201, description: 'Course assigned successfully' })
+  @ApiResponse({ status: 404, description: 'Group or course not found' })
+  @ApiResponse({ status: 409, description: 'Course already assigned to group' })
+  assignCourseToGroup(
+    @Param('id') groupId: string,
+    @Body() assignCourseDto: AssignCourseDto,
+  ) {
+    return this.groupsService.assignCourseToGroup(groupId, assignCourseDto);
   }
 
   @Patch(':id')

@@ -236,8 +236,6 @@ export class UsersService {
             phone: 1,
             companyName: 1,
             userType: 1,
-            // userTypeName: '$userTypeDetails.name',
-            // userTypeDescription: '$userTypeDetails.description',
             departmentId: 1,
             groupId: 1,
             companyId: 1,

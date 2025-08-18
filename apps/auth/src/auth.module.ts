@@ -14,6 +14,7 @@ import { UserTypeModule } from './userType/userType.module';
 import { LmsModule } from './lms/lms.module';
 import { GroupsModule } from './groups/groups.module';
 import { DepartmentsModule } from './departments/departments.module';
+import { EmailModule } from './email/email.module';
 import { QuizzesModule } from './quizzes/quizzes.module';
 import { VideosModule } from './videos/videos.module';
 import { CoursesModule } from './courses/courses.module';
@@ -53,6 +54,7 @@ import { UserProgressModule } from './user-progress/user-progress.module';
     LmsModule,
     GroupsModule,
     DepartmentsModule,
+    EmailModule,
     QuizzesModule,
     VideosModule,
     CoursesModule,
