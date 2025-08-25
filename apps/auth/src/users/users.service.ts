@@ -339,7 +339,7 @@ export class UsersService {
 
         try {
           // Validate required fields
-          if (!row.fullName || !row.email || !row.password) {
+          if (!row.fullName || !row.email ) {
             results.failed++;
             results.errors.push(`Row ${rowNumber}: Missing required fields (fullName, email, password)`);
             continue;
@@ -370,23 +370,10 @@ export class UsersService {
             }
           }
 
-          // Validate departmentId format if provided
-          if (row.departmentId && !/^[0-9a-fA-F]{24}$/.test(row.departmentId)) {
-            results.failed++;
-            results.errors.push(`Row ${rowNumber}: Invalid departmentId format (must be a valid MongoDB ObjectId)`);
-            continue;
-          }
+        
 
           // Validate department exists if departmentId is provided
-          if (row.departmentId) {
-            const department = await this.departmentModel.findById(row.departmentId).exec();
-            if (!department) {
-              results.failed++;
-              results.errors.push(`Row ${rowNumber}: Department with ID ${row.departmentId} does not exist`);
-              continue;
-            }
-          }
-
+         
           // Check if user already exists
           try {
             await this.usersRepository.findOne({ email: row.email });
@@ -401,13 +388,13 @@ export class UsersService {
           const userData = {
             fullName: row.fullName,
             email: row.email,
-            password: row.password,
+
             userType: row.userType || 'user',
             companyName: row.companyName || '',
             country: row.country || '',
             isTermsAccepted: row.isTermsAccepted === 'true' || row.isTermsAccepted === true,
             groupId: row.groupId || undefined,
-            departmentId: row.departmentId || undefined,
+          
           };
 
           await this.usersRepository.createUser(userData);
