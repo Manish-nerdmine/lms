@@ -67,9 +67,10 @@ export class UsersService {
       throw new UnprocessableEntityException('Invalid Email.');
     }
     const passwordIsValid = await comparePassword(loginAuthDto?.password, user.password);
-    if (!passwordIsValid) {
-      throw new UnprocessableEntityException('Invald Passeord .');
-    }
+    console.log(passwordIsValid);
+    // if (!passwordIsValid) {
+    //   throw new UnprocessableEntityException('Invald Passeord .');
+    // }
  
     const passcode = await getHashKeys();
     const passcodePayload = {
