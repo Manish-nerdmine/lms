@@ -19,6 +19,15 @@ export class CreateUserDto {
   @Transform(({ value }) => (value ? value?.toLowerCase() : value))
   email: string;
 
+  @ApiProperty({ example: '9876543210', description: 'Phone number' })
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @ApiProperty({ example: '1234567890', description: 'Password' })
+  @IsString()
+  @IsOptional()
+  password?: string;
 
   @ApiProperty({ example: true, description: 'User has accepted terms and conditions' })
   @IsBoolean()

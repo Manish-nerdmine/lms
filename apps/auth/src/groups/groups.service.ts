@@ -184,8 +184,17 @@ export class GroupsService {
         }
       },
       {
+        $lookup: {
+          from: 'courses',
+          localField: 'courses',
+          foreignField: '_id',
+          as: 'courseDetails'
+        }
+      },
+      {
         $addFields: {
-          totalUsers: { $size: '$users' }
+          totalUsers: { $size: '$users' },
+          totalCourses: { $size: '$courseDetails' }
         }
       }
     ];
