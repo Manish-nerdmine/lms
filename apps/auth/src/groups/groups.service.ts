@@ -186,7 +186,7 @@ export class GroupsService {
       {
         $lookup: {
           from: 'courses',
-          localField: 'courses',
+          localField: 'courses.courseId',
           foreignField: '_id',
           as: 'courseDetails'
         }
@@ -194,7 +194,45 @@ export class GroupsService {
       {
         $addFields: {
           totalUsers: { $size: '$users' },
-          totalCourses: { $size: '$courseDetails' }
+          totalCourses: { $size: '$courses' },
+          coursesWithDetails: {
+            $map: {
+              input: '$courses',
+              as: 'course',
+              in: {
+                $mergeObjects: [
+                  '$$course',
+                  {
+                    courseDetails: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: '$courseDetails',
+                            as: 'detail',
+                            cond: { $eq: ['$$detail._id', '$$course.courseId'] }
+                          }
+                        },
+                        0
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          description: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          users: 1,
+          totalUsers: 1,
+          totalCourses: 1,
+          coursesWithDetails: 1
         }
       }
     ];
