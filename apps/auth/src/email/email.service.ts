@@ -32,7 +32,7 @@ export class EmailService {
     try {
       const mailOptions = {
         from: 'instatimu@gmail.com',
-        to: 'manishiit90@gmail.com',
+        to: userEmail,
         subject: `New Course Assigned: ${courseTitle}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
