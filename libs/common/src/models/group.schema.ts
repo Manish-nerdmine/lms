@@ -9,8 +9,18 @@ export class Group extends Document {
   @Prop()
   description: string;
 
-  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Course' }] })
-  courses: string[];
+  @Prop({
+    type: [{
+      courseId: { type: MongooseSchema.Types.ObjectId, ref: 'Course', required: true },
+      dueDate: { type: Date, required: true }
+    }],
+    default: []
+  })
+  courses: Array<{
+    courseId: string;
+    dueDate: Date;
+  }>;
+  
 }
 
 export const GroupSchema = SchemaFactory.createForClass(Group); 

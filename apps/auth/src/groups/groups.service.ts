@@ -275,14 +275,20 @@ export class GroupsService {
     }
 
     // Check if course is already assigned to the group
-    if (group.courses && group.courses.includes(assignCourseDto.courseId)) {
+    if (group.courses && group.courses.some(c => c.courseId.toString() === assignCourseDto.courseId)) {
       throw new ConflictException('Course is already assigned to this group');
     }
+
+    // Prepare course assignment with due date
+    const courseAssignment = {
+      courseId: assignCourseDto.courseId,
+      dueDate: new Date(assignCourseDto.dueDate)
+    };
 
     // Add course to group
     const updatedGroup = await this.groupModel.findByIdAndUpdate(
       groupId,
-      { $push: { courses: assignCourseDto.courseId } },
+      { $push: { courses: courseAssignment } },
       { new: true }
     ).exec();
 
