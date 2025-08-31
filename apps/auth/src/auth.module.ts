@@ -20,6 +20,7 @@ import { VideosModule } from './videos/videos.module';
 import { CoursesModule } from './courses/courses.module';
 import { QuizAttemptsModule } from './quiz-attempts/quiz-attempts.module';
 import { UserProgressModule } from './user-progress/user-progress.module';
+import { EmploymentModule } from './employment/employment.module';
 
 @Module({
   imports: [
@@ -37,10 +38,8 @@ import { UserProgressModule } from './user-progress/user-progress.module';
           name: AUTH_SERVICE,
           useFactory: (configService: ConfigService) => ({
             transport: Transport.TCP,
-            options: {
-              host: configService.get('TCP_HOST'),
-              port: configService.get('TCP_PORT'),
-            },
+            host: configService.get('TCP_HOST'),
+            port: configService.get('TCP_PORT'),
           }),
           inject: [ConfigService],
         },
@@ -60,6 +59,7 @@ import { UserProgressModule } from './user-progress/user-progress.module';
     CoursesModule,
     QuizAttemptsModule,
     UserProgressModule,
+    EmploymentModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, PasscodeService, PasscodeRepository, ClientsModule],

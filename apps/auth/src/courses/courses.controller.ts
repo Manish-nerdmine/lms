@@ -12,15 +12,17 @@ import {
   Res,
   StreamableFile,
   NotFoundException,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { PasscodeAuthGuard } from '@app/common/auth/passcode-auth.guard';
-import { ApiTags, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiConsumes, ApiBody, ApiParam, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import * as fs from 'fs';
 import * as path from 'path';
+import { CourseUsersProgressResponseDto } from './dto/course-users-progress.dto';
 
 @ApiTags('courses')
 @Controller('courses')
@@ -100,5 +102,23 @@ export class CoursesController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.coursesService.remove(id);
+  }
+
+  @Get(':id/users-progress')
+  @ApiTags('courses')
+  @ApiParam({ name: 'id', description: 'Course ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns all users associated with the course through groups and their progress',
+    type: CourseUsersProgressResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Course not found',
+  })
+  getCourseUsersWithProgress(
+    @Param('id') id: string,
+  ): Promise<CourseUsersProgressResponseDto> {
+    return this.coursesService.getCourseUsersWithProgress(id);
   }
 } 

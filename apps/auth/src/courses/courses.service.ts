@@ -1,8 +1,11 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Course } from '@app/common/models/lms.schema';
+import { Course, UserProgress } from '@app/common/models/lms.schema';
+import { UserDocument } from '@app/common/models/user.schema';
+import { Group } from '@app/common/models/group.schema';
 import { CreateCourseDto } from './dto/create-course.dto';
+import { CourseUsersProgressResponseDto } from './dto/course-users-progress.dto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -14,6 +17,9 @@ export class CoursesService {
 
   constructor(
     @InjectModel(Course.name) private readonly courseModel: Model<Course>,
+    @InjectModel(UserProgress.name) private readonly userProgressModel: Model<UserProgress>,
+    @InjectModel(UserDocument.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(Group.name) private readonly groupModel: Model<Group>,
   ) {
     // Ensure upload directory exists
     if (!fs.existsSync(this.uploadDir)) {
@@ -123,5 +129,77 @@ export class CoursesService {
     if (result.deletedCount === 0) {
       throw new NotFoundException('Course not found');
     }
+  }
+
+  async getCourseUsersWithProgress(courseId: string): Promise<CourseUsersProgressResponseDto> {
+    // First check if course exists
+    const course = await this.courseModel.findById(courseId).exec();
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    // Find groups that have this course assigned
+    const groupsWithCourse = await this.groupModel.find({
+      'courses.courseId': courseId
+    }).exec();
+
+    const groupIds = groupsWithCourse.map(group => group._id.toString());
+
+    // Find users who belong to these groups
+    const usersInGroups = await this.userModel.find({
+      groupId: { $in: groupIds }
+    }).exec();
+
+    // Get all user progress records for this course
+    const userProgresses = await this.userProgressModel
+      .find({ courseId })
+      .populate('userId', 'fullName email companyName userType')
+      .exec();
+
+    // Create a map of user progress by userId
+    const progressMap = new Map();
+    userProgresses.forEach(progress => {
+      const user = progress.userId as any;
+      progressMap.set(user._id.toString(), {
+        completedVideos: progress.completedVideos,
+        completedQuizzes: progress.completedQuizzes,
+        progressPercentage: progress.progressPercentage,
+        totalCompletedItems: progress.completedVideos.length + progress.completedQuizzes.length,
+        lastUpdated: (progress as any).updatedAt,
+      });
+    });
+
+    // Transform the data to include user details and progress
+    const usersWithProgress = usersInGroups.map(user => {
+      const progress = progressMap.get(user._id.toString()) || {
+        completedVideos: [],
+        completedQuizzes: [],
+        progressPercentage: 0,
+        totalCompletedItems: 0,
+        lastUpdated: user.updatedAt,
+      };
+
+      return {
+        userId: user._id.toString(),
+        fullName: user.fullName,
+        email: user.email,
+        companyName: user.companyName,
+        userType: user.userType,
+        progress: {
+          completedVideos: progress.completedVideos,
+          completedQuizzes: progress.completedQuizzes,
+          progressPercentage: progress.progressPercentage,
+          totalCompletedItems: progress.totalCompletedItems,
+        },
+        lastUpdated: progress.lastUpdated,
+      };
+    });
+
+    return {
+      courseId,
+      courseTitle: course.title,
+      totalUsers: usersWithProgress.length,
+      users: usersWithProgress,
+    };
   }
 } 

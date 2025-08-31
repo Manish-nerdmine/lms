@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Group } from '@app/common/models/group.schema';
 import { UserDocument } from '@app/common/models/user.schema';
+import { EmploymentDocument } from '@app/common/models/employment.schema';
 import { Course } from '@app/common/models/lms.schema';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
@@ -14,6 +15,7 @@ export class GroupsService {
   constructor(
     @InjectModel(Group.name) private readonly groupModel: Model<Group>,
     @InjectModel(UserDocument.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(EmploymentDocument.name) private readonly employmentModel: Model<EmploymentDocument>,
     @InjectModel(Course.name) private readonly courseModel: Model<Course>,
     private readonly emailService: EmailService,
   ) {}
@@ -45,7 +47,7 @@ export class GroupsService {
     const limitNum = Math.max(1, parseInt(String(limit)) || 10);
     const skip = (pageNum - 1) * limitNum;
     
-    // Use aggregation to get groups with user counts
+    // Use aggregation to get groups with user and employee counts
     const pipeline = [
       {
         $lookup: {
@@ -56,8 +58,18 @@ export class GroupsService {
         }
       },
       {
+        $lookup: {
+          from: 'employmentdocuments', // MongoDB collection name for Employment
+          localField: '_id',
+          foreignField: 'groupId',
+          as: 'employees'
+        }
+      },
+      {
         $addFields: {
-          totalUsers: { $size: '$users' }
+          totalUsers: { $size: '$users' },
+          totalEmployees: { $size: '$employees' },
+          totalMembers: { $add: [{ $size: '$users' }, { $size: '$employees' }] }
         }
       },
       {
@@ -68,6 +80,8 @@ export class GroupsService {
           createdAt: 1,
           updatedAt: 1,
           totalUsers: 1,
+          totalEmployees: 1,
+          totalMembers: 1,
           //completionRate: 1,
          // users: 0 // Remove the users array, keep only the count
         }
@@ -288,12 +302,17 @@ export class GroupsService {
 
     // Get count of users assigned to this group
     const userCount = await this.userModel.countDocuments({ groupId: id }).exec();
+    
+    // Get count of employees assigned to this group
+    const employeeCount = await this.employmentModel.countDocuments({ groupId: id, isActive: true }).exec();
 
     return {
       name: group.name,
       description: group.description,
       createdAt: (group as any).createdAt || new Date(),
       totalUsers: userCount,
+      totalEmployees: employeeCount,
+      totalMembers: userCount + employeeCount,
       // You'll need to implement completion rate logic based on your requirements
       completionRate: 0 // Placeholder value
     };
@@ -336,19 +355,41 @@ export class GroupsService {
         // Get all users in the group
         const users = await this.userModel.find({ groupId }).exec();
         
+        // Get all employees in the group
+        const employees = await this.employmentModel.find({ groupId, isActive: true }).exec();
+        
+        // Combine users and employees for email notifications
+        const allRecipients = [];
+        
+        // Add users
         if (users.length > 0) {
           const usersWithEmail = users.filter(user => user.email);
-          
-          if (usersWithEmail.length > 0) {
-            await this.emailService.sendBulkCourseAssignmentEmails(
-              usersWithEmail.map(user => ({
-                email: user.email,
-                fullName: user.fullName
-              })),
-              course.title,
-              group.name
-            );
-          }
+          allRecipients.push(...usersWithEmail.map(user => ({
+            email: user.email,
+            fullName: user.fullName,
+            type: 'user'
+          })));
+        }
+        
+        // Add employees
+        if (employees.length > 0) {
+          const employeesWithEmail = employees.filter(emp => emp.email);
+          allRecipients.push(...employeesWithEmail.map(emp => ({
+            email: emp.email,
+            fullName: emp.fullName,
+            type: 'employee'
+          })));
+        }
+        
+        if (allRecipients.length > 0) {
+          await this.emailService.sendBulkCourseAssignmentEmails(
+            allRecipients.map(recipient => ({
+              email: recipient.email,
+              fullName: recipient.fullName
+            })),
+            course.title,
+            group.name
+          );
         }
       } catch (error) {
         // Log error but don't fail the assignment
