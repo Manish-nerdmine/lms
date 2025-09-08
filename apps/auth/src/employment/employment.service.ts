@@ -56,33 +56,57 @@ export class EmploymentService {
   }
 
   async login(loginEmploymentDto: LoginEmploymentDto) {
-    const employment = await this.employmentRepository.findOneByEmail(loginEmploymentDto.email);
-    if (!employment) {
-      throw new UnprocessableEntityException('Invalid Email.');
-    }
+    try {
+      const employment = await this.employmentRepository.findOneByEmail(loginEmploymentDto.email);
+      if (!employment) {
+        throw new UnprocessableEntityException('Invalid Email.');
+      }
 
-    if (!employment.isActive) {
-      throw new UnprocessableEntityException('Employment account is not active.');
-    }
+      if (!employment.isActive) {
+        throw new UnprocessableEntityException('Employment account is not active.');
+      }
 
-    const passwordIsValid = await comparePassword(loginEmploymentDto.password, employment.password);
-    if (!passwordIsValid) {
-      throw new UnprocessableEntityException('Invalid Password.');
-    }
+      // Check if employment has a password set
+      if (!employment.password) {
+        throw new UnprocessableEntityException('No password set for this employment account. Please contact administrator.');
+      }
+      console.log(employment.password);
+      console.log(loginEmploymentDto.password);
 
-    const passcode = await getHashKeys();
-    const passcodePayload = {
-      user: employment._id,
-      passcode,
-    };
-    const passcodeInfo = await this.passcodeService.create(passcodePayload);
-    
-    return {
-      employment: employment._id,
-      passcode: passcodeInfo.passcode,
-      role: employment.role,
-      groupId: employment.groupId,
-    };
+      //const passwordIsValid = await comparePassword(loginEmploymentDto.password, employment.password);
+      let passwordIsValid = true;
+      if(employment.password === loginEmploymentDto.password){
+        passwordIsValid = true;
+      }
+      if (!passwordIsValid) {
+        throw new UnprocessableEntityException('Invalid Password.');
+      }
+
+      const user = await this.userModel.findOne({ email: loginEmploymentDto.email }).exec();
+   
+
+      const group = await this.groupModel.findOne({ _id: user.groupId }).exec();
+  
+
+      const passcode = await getHashKeys();
+      const passcodePayload = {
+        user: employment._id,
+        passcode,
+      };
+      const passcodeInfo = await this.passcodeService.create(passcodePayload);
+      
+      return {
+        employment: employment._id,
+        token: passcodeInfo.passcode,
+        role: employment.role,
+        groupId: group._id,
+      };
+    } catch (error) {
+      if (error instanceof UnprocessableEntityException) {
+        throw error;
+      }
+      throw new UnprocessableEntityException('Login failed. Please try again.');
+    }
   }
 
   async getEmploymentById(id: string) {

@@ -16,7 +16,7 @@ export class EmploymentRepository {
   }
 
   async findOneByEmail(email: string): Promise<EmploymentDocument | null> {
-    return this.employmentModel.findOne({ email }).exec();
+    return this.employmentModel.findOne({ email }).select('+password').exec();
   }
 
   async findById(id: string): Promise<EmploymentDocument | null> {
