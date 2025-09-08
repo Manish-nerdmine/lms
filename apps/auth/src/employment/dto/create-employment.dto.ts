@@ -18,12 +18,9 @@ export class CreateEmploymentDto {
   @IsOptional()
   password?: string;
 
-  @ApiProperty({ example: 'user', description: 'Role of the employee', enum: ['user', 'admin'] })
-  @IsEnum(['user', 'admin'])
+  @ApiProperty({ example: 'user', description: 'Role of the employee' })
   @IsOptional()
   role?: string;
-
-
 
   @ApiProperty({ example: true, description: 'Employee has accepted terms and conditions' })
   @IsBoolean()

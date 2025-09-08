@@ -22,11 +22,8 @@ export class EmploymentService {
 
   async create(createEmploymentDto: CreateEmploymentDto) {
     try {
-      await this.validateCreateEmploymentDto(createEmploymentDto);
+     // await this.validateCreateEmploymentDto(createEmploymentDto);
       
-
-
-
       // Check if user with this email exists (this is allowed for employment)
       const existingUser = await this.userModel.findOne({ email: createEmploymentDto.email }).exec();
       if (!existingUser) {
