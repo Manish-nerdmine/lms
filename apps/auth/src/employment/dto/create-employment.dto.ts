@@ -23,20 +23,7 @@ export class CreateEmploymentDto {
   @IsOptional()
   role?: string;
 
-  @ApiProperty({ example: 'Software Engineer', description: 'Position of the employee' })
-  @IsString()
-  @IsOptional()
-  position?: string;
 
-  @ApiProperty({ example: '657e902c4b628d1f0fc8f09e', description: 'Group ID (optional)', required: false })
-  @IsOptional()
-  @IsMongoId()
-  groupId?: string;
-
-  @ApiProperty({ example: '657e902c4b628d1f0fc8f09e', description: 'Department ID (optional)', required: false })
-  @IsOptional()
-  @IsMongoId()
-  departmentId?: string;
 
   @ApiProperty({ example: true, description: 'Employee has accepted terms and conditions' })
   @IsBoolean()

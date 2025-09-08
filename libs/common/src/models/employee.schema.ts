@@ -15,11 +15,6 @@ export class Employee extends Document {
   @Prop()
   role: string;
 
-  @Prop()
-  department: string;
-
-  @Prop()
-  position: string;
 }
 
 export const EmployeeSchema = SchemaFactory.createForClass(Employee); 

@@ -24,31 +24,13 @@ export class EmploymentService {
     try {
       await this.validateCreateEmploymentDto(createEmploymentDto);
       
-      // If groupId is provided, validate it exists
-      if (createEmploymentDto.groupId) {
-        const group = await this.groupModel.findById(createEmploymentDto.groupId).exec();
-        if (!group) {
-          throw new NotFoundException('Group not found');
-        }
-      }
 
-      // If departmentId is provided, validate it exists
-      if (createEmploymentDto.departmentId) {
-        const department = await this.departmentModel.findById(createEmploymentDto.departmentId).exec();
-        if (!department) {
-          throw new NotFoundException('Department not found');
-        }
-      }
+
 
       // Check if user with this email exists (this is allowed for employment)
       const existingUser = await this.userModel.findOne({ email: createEmploymentDto.email }).exec();
       if (!existingUser) {
         throw new BadRequestException('Email must exist in user schema to create employment record');
-      }
-
-      // Set default role to 'user' if not provided
-      if (!createEmploymentDto.role) {
-        createEmploymentDto.role = 'user';
       }
 
       // Set isActive to true by default
