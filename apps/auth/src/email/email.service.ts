@@ -28,8 +28,14 @@ export class EmailService {
     userName: string,
     courseTitle: string,
     groupName: string,
+    linkType?: string,
+    link?: string,
   ): Promise<void> {
     try {
+      // Determine the button text and action based on link type
+      const buttonText = linkType === 'signup' ? 'Sign Up Now' : 'Access Course';
+      const actionText = linkType === 'signup' ? 'sign up' : 'log in';
+      
       const mailOptions = {
         from: 'instatimu@gmail.com',
         to: userEmail,
@@ -42,8 +48,18 @@ export class EmailService {
               <h3 style="color: #007bff; margin-top: 0;">Course Details:</h3>
               <p><strong>Course Title:</strong> ${courseTitle}</p>
               <p><strong>Group:</strong> ${groupName}</p>
+              
             </div>
-            <p>Please log in to your LMS account to access the course content.</p>
+            ${link ? `
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${link}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                  ${buttonText}
+                </a>
+              </div>
+              <p>Click the button above to ${actionText} and access your course content.</p>
+            ` : `
+              <p>Please log in to your LMS account to access the course content.</p>
+            `}
             <p>Best regards,<br>LMS Team</p>
           </div>
         `,
@@ -58,12 +74,19 @@ export class EmailService {
   }
 
   async sendBulkCourseAssignmentEmails(
-    users: Array<{ email: string; fullName: string }>,
+    users: Array<{ email: string; fullName: string; linkType?: string; link?: string }>,
     courseTitle: string,
     groupName: string,
   ): Promise<void> {
     const emailPromises = users.map(user =>
-      this.sendCourseAssignmentEmail(user.email, user.fullName, courseTitle, groupName)
+      this.sendCourseAssignmentEmail(
+        user.email, 
+        user.fullName, 
+        courseTitle, 
+        groupName, 
+        user.linkType, 
+        user.link
+      )
     );
 
     try {

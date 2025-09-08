@@ -358,34 +358,65 @@ export class GroupsService {
         // Get all employees in the group
         const employees = await this.employmentModel.find({ groupId, isActive: true }).exec();
         
-        // Combine users and employees for email notifications
+        // Get existing employees (those who already have accounts)
+        const employeeEmails = employees.map(emp => emp.email).filter(email => email);
+        const existingEmployees = await this.employmentModel.find({ 
+          email: { $in: employeeEmails } 
+        }).exec();
+        const existingEmployeeEmails = new Set(existingEmployees.map(emp => emp.email));
+        
+        // Prepare recipients with different link types
         const allRecipients = [];
         
-        // Add users
+        // Add users (always get login link)
         if (users.length > 0) {
           const usersWithEmail = users.filter(user => user.email);
           allRecipients.push(...usersWithEmail.map(user => ({
             email: user.email,
             fullName: user.fullName,
-            type: 'user'
+            type: 'user',
+            linkType: 'login',
+            link: "http://195.35.21.108:5174/auth/login"
           })));
         }
         
-        // Add employees
+        // Add employees with appropriate link type
         if (employees.length > 0) {
           const employeesWithEmail = employees.filter(emp => emp.email);
-          allRecipients.push(...employeesWithEmail.map(emp => ({
-            email: emp.email,
-            fullName: emp.fullName,
-            type: 'employee'
-          })));
+          allRecipients.push(...employeesWithEmail.map(emp => {
+            const isExistingEmployee = existingEmployeeEmails.has(emp.email);
+            const linkType = isExistingEmployee ? 'login' : 'signup';
+            
+            let link;
+            if (isExistingEmployee) {
+              link = "http://195.35.21.108:5174/auth/login";
+            } else {
+              // Create signup link with query parameters
+              const params = new URLSearchParams({
+                email: emp.email,
+                name: emp.fullName,
+                role: emp.role
+              });
+              link = `http://195.35.21.108:5174/auth/signup?${params.toString()}`;
+            }
+            
+            return {
+              email: emp.email,
+              fullName: emp.fullName,
+              type: 'employee',
+              linkType,
+              link
+            };
+          }));
         }
         
         if (allRecipients.length > 0) {
           await this.emailService.sendBulkCourseAssignmentEmails(
             allRecipients.map(recipient => ({
               email: recipient.email,
-              fullName: recipient.fullName
+              fullName: recipient.fullName,
+              linkType: recipient.linkType,
+              link: recipient.link
             })),
             course.title,
             group.name
