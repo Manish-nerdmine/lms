@@ -9,6 +9,7 @@ import { getHashKeys, comparePassword } from '../utils/common.utils';
 import { Group } from '@app/common/models/group.schema';
 import { Department } from '@app/common/models/department.schema';
 import { UserDocument } from '@app/common/models/user.schema';
+import { Video, Quiz } from '@app/common/models/lms.schema';
 
 @Injectable()
 export class EmploymentService {
@@ -17,7 +18,9 @@ export class EmploymentService {
     private readonly passcodeService: PasscodeService,
     @InjectModel(Group.name) private readonly groupModel: Model<Group>,
     @InjectModel(Department.name) private readonly departmentModel: Model<Department>,
-    @InjectModel(UserDocument.name) private readonly userModel: Model<UserDocument>
+    @InjectModel(UserDocument.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(Video.name) private readonly videoModel: Model<Video>,
+    @InjectModel(Quiz.name) private readonly quizModel: Model<Quiz>
   ) {}
 
   async create(createEmploymentDto: CreateEmploymentDto) {
@@ -141,8 +144,56 @@ export class EmploymentService {
 
   async getEmploymentsByGroup(groupId: string) {
     try {
-      return await this.employmentRepository.find({ groupId, isActive: true });
+      const group = await this.groupModel.findOne({ _id: groupId }).populate({
+        path: 'courses.courseId',
+        populate: [
+          {
+            path: 'videos',
+            model: 'Video'
+          },
+          {
+            path: 'quizzes',
+            model: 'Quiz'
+          }
+        ]
+      }).exec();
+
+      if (!group) {
+        throw new NotFoundException('Group not found');
+      }
+
+      // Transform the data to include full course details
+      const coursesWithDetails = group.courses.map(course => {
+        const courseData = course.courseId as any; // Type assertion for populated data
+        return {
+          courseId: courseData._id,
+          dueDate: course.dueDate,
+          courseDetails: {
+            title: courseData.title,
+            description: courseData.description,
+            thumbnail: courseData.thumbnail,
+            isActive: courseData.isActive,
+            videos: courseData.videos || [],
+            quizzes: courseData.quizzes || [],
+            totalVideos: courseData.videos ? courseData.videos.length : 0,
+            totalQuizzes: courseData.quizzes ? courseData.quizzes.length : 0,
+            createdAt: courseData.createdAt,
+            updatedAt: courseData.updatedAt
+          }
+        };
+      });
+
+      return {
+        groupId: group._id,
+        groupName: group.name,
+        groupDescription: group.description,
+        totalCourses: coursesWithDetails.length,
+        courses: coursesWithDetails
+      };
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       throw new UnprocessableEntityException(error.message);
     }
   }
