@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Query,
+  Put,
 } from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import { CreateGroupDto } from './dto/create-group.dto';
@@ -72,7 +73,7 @@ export class GroupsController {
     return this.groupsService.assignCourseToGroup(groupId, assignCourseDto);
   }
 
-  @Patch(':id')
+  @Put(':id')
   @ApiOperation({ summary: 'Update a group' })
   @ApiResponse({ status: 404, description: 'Group not found' })
   @ApiResponse({ status: 409, description: 'Group with this name already exists' })
