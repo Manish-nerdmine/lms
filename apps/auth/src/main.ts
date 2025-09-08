@@ -29,7 +29,6 @@ async function bootstrap() {
       },
     }),
   );
-  
 
   app.connectMicroservice({
     transport: Transport.TCP,
@@ -45,8 +44,6 @@ async function bootstrap() {
       defaultVersion: DEFAULT_AUTH_API_VERSION,
     })
     .setGlobalPrefix(AUTH_ROUTE_PREFIX);
-
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   app.useLogger(app.get(Logger));
 
   await app.startAllMicroservices();

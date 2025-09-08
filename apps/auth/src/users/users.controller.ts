@@ -80,9 +80,19 @@ export class UsersController {
   }
 
   @Put(':id')
-
   @ApiOperation({ summary: 'Update user' })
-  @ApiResponse({ status: 200, description: 'User updated successfully' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'User updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'User updated successfully' },
+        success: { type: 'boolean', example: true },
+        data: { type: 'object', description: 'Updated user data' }
+      }
+    }
+  })
   @ApiResponse({ status: 404, description: 'User not found' })
   @ApiResponse({ status: 409, description: 'Email already exists' })
   async updateUser(

@@ -134,7 +134,12 @@ export class UsersService {
 
 
       const updatedUser = await this.usersRepository.findByIdAndUpdate(id, updateUserDto, { new: true });
-      return updatedUser;
+      
+      return {
+        message: 'User updated successfully',
+        success: true,
+        data: updatedUser
+      };
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof ConflictException) {
         throw error;
