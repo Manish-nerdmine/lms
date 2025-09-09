@@ -370,13 +370,14 @@ export class GroupsService {
         
         // Add users (always get login link)
         if (users.length > 0) {
+          
           const usersWithEmail = users.filter(user => user.email);
           allRecipients.push(...usersWithEmail.map(user => ({
             email: user.email,
             fullName: user.fullName,
             type: 'user',
             linkType: 'login',
-            link: "http://195.35.21.108:5174/auth/login"
+            link: "http://195.35.21.108:5175/auth/signup"
           })));
         }
         
