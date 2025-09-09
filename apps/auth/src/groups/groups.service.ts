@@ -389,7 +389,7 @@ export class GroupsService {
             
             let link;
             if (isExistingEmployee) {
-              link = "http://195.35.21.108:5174/auth/login";
+              link = "http://195.35.21.108:5175/auth/login";
             } else {
               // Create signup link with query parameters
               const params = new URLSearchParams({
@@ -397,7 +397,7 @@ export class GroupsService {
                 name: emp.fullName,
                 role: emp.role
               });
-              link = `http://195.35.21.108:5174/auth/signup?${params.toString()}`;
+              link = `http://195.35.21.108:5175/auth/signup?${params.toString()}`;
             }
             
             return {
