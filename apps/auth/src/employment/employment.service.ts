@@ -24,26 +24,31 @@ export class EmploymentService {
   ) {}
 
   async create(createEmploymentDto: CreateEmploymentDto) {
-    try {
-     // await this.validateCreateEmploymentDto(createEmploymentDto);
-      
-      // Check if user with this email exists (this is allowed for employment)
-      const existingUser = await this.userModel.findOne({ email: createEmploymentDto.email }).exec();
-      if (!existingUser) {
-        throw new BadRequestException('Email must exist in user schema to create employment record');
-      }
-
-      // Set isActive to true by default
-      createEmploymentDto['isActive'] = true;
-
-      return await this.employmentRepository.createEmployment(createEmploymentDto);
-    } catch (err) {
-      if (err instanceof NotFoundException || err instanceof BadRequestException) {
-        throw err;
-      }
-      throw new UnprocessableEntityException(err.message);
+  try {
+    // Check if user with this email exists
+    const existingUser = await this.userModel.findOne({ email: createEmploymentDto.email }).exec();
+    if (!existingUser) {
+      throw new BadRequestException('Email must exist in user schema to create employment record');
     }
+
+    // Set isActive to true by default
+    createEmploymentDto['isActive'] = true;
+
+    const employment = await this.employmentRepository.createEmployment(createEmploymentDto);
+
+    //  custom response with both IDs
+    return {
+      message: 'Employment created successfully',
+      employmentId: employment._id,
+      userId: existingUser._id,
+    };
+  } catch (err) {
+    if (err instanceof NotFoundException || err instanceof BadRequestException) {
+      throw err;
+    }
+    throw new UnprocessableEntityException(err.message);
   }
+}
 
   private async validateCreateEmploymentDto(createEmploymentDto: CreateEmploymentDto) {
     try {
