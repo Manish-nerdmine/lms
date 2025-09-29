@@ -100,6 +100,7 @@ export class EmploymentService {
       
       return {
         employment: employment._id,
+        userId: user._id,
         token: passcodeInfo.passcode,
         role: employment.role,
         groupId: group._id,
