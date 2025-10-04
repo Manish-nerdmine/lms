@@ -48,8 +48,8 @@ export class EmploymentService {
         }
       }
 
-      // Set isActive to true by default
-      createEmploymentDto['isActive'] = true;
+    // Set isActive to true by default
+    createEmploymentDto['isActive'] = true;
 
       return await this.employmentRepository.createEmployment(createEmploymentDto);
     } catch (err) {
@@ -74,58 +74,64 @@ export class EmploymentService {
   }
 
   async login(loginEmploymentDto: LoginEmploymentDto) {
-    try {
-      const employment = await this.employmentRepository.findOneByEmail(loginEmploymentDto.email);
-      if (!employment) {
-        throw new UnprocessableEntityException('Invalid Email.');
-      }
-
-      if (!employment.isActive) {
-        throw new UnprocessableEntityException('Employment account is not active.');
-      }
-
-      // Check if employment has a password set
-      if (!employment.password) {
-        throw new UnprocessableEntityException('No password set for this employment account. Please contact administrator.');
-      }
-      console.log(employment.password);
-      console.log(loginEmploymentDto.password);
-
-      //const passwordIsValid = await comparePassword(loginEmploymentDto.password, employment.password);
-      let passwordIsValid = true;
-      if(employment.password === loginEmploymentDto.password){
-        passwordIsValid = true;
-      }
-      if (!passwordIsValid) {
-        throw new UnprocessableEntityException('Invalid Password.');
-      }
-
-      const user = await this.userModel.findOne({ email: loginEmploymentDto.email }).exec();
-   
-
-      const group = await this.groupModel.findOne({ _id: user.groupId }).exec();
-  
-
-      const passcode = await getHashKeys();
-      const passcodePayload = {
-        user: employment._id,
-        passcode,
-      };
-      const passcodeInfo = await this.passcodeService.create(passcodePayload);
-      
-      return {
-        employment: employment._id,
-        token: passcodeInfo.passcode,
-        role: employment.role,
-        groupId: group._id,
-      };
-    } catch (error) {
-      if (error instanceof UnprocessableEntityException) {
-        throw error;
-      }
-      throw new UnprocessableEntityException('Login failed. Please try again.');
+  try {
+    const employment = await this.employmentRepository.findOneByEmail(loginEmploymentDto.email);
+    if (!employment) {
+      throw new UnprocessableEntityException('Invalid Email.');
     }
+
+    if (!employment.isActive) {
+      throw new UnprocessableEntityException('Employment account is not active.');
+    }
+
+    // Check if employment has a password set
+    if (!employment.password) {
+      throw new UnprocessableEntityException(
+        'No password set for this employment account. Please contact administrator.'
+      );
+    }
+
+    // const passwordIsValid = await comparePassword(loginEmploymentDto.password, employment.password);
+    const passwordIsValid = employment.password === loginEmploymentDto.password;
+    if (!passwordIsValid) {
+      throw new UnprocessableEntityException('Invalid Password.');
+    }
+
+    // Find user by email
+    const user = await this.userModel.findOne({ email: loginEmploymentDto.email }).exec();
+    if (!user) {
+      throw new UnprocessableEntityException('User not found in User schema.');
+    }
+
+    // Find group (if exists)
+    const group = user.groupId
+      ? await this.groupModel.findOne({ _id: user.groupId }).exec()
+      : null;
+
+    // Create passcode
+    const passcode = await getHashKeys();
+    const passcodePayload = {
+      user: employment._id,
+      passcode,
+    };
+    const passcodeInfo = await this.passcodeService.create(passcodePayload);
+
+    // Final response 
+    return {
+      message: 'Login successful',
+      employmentId: employment._id,
+      userId: user._id,              
+      token: passcodeInfo.passcode,
+      role: employment.role,
+      groupId: group?._id ?? null,
+    };
+  } catch (error) {
+    if (error instanceof UnprocessableEntityException) {
+      throw error;
+    }
+    throw new UnprocessableEntityException('Login failed. Please try again.');
   }
+}
 
   async getEmploymentById(id: string) {
     try {
