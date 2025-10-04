@@ -124,33 +124,13 @@ export class UsersService {
       }
 
       // If groupId is provided, validate it exists and check for course assignments
-      if (updateUserDto.groupId) {
-        const group = await this.groupModel.findById(updateUserDto.groupId).exec();
-        if (!group) {
-          throw new NotFoundException('Group not found');
-        }
-        
-        // Check if the group has courses assigned
-        if (group.courses && group.courses.length > 0) {
-          throw new ForbiddenException(
-            'Cannot assign user to group with assigned courses. Please remove course assignments first.'
-          );
-        }
-      }
+    
 
-      // If user is being moved from a group with courses, prevent the update
-      if (existingUser.groupId && updateUserDto.groupId !== existingUser.groupId.toString()) {
-        const currentGroup = await this.groupModel.findById(existingUser.groupId).exec();
-        if (currentGroup && currentGroup.courses && currentGroup.courses.length > 0) {
-          throw new ForbiddenException(
-            'Cannot move user from group with assigned courses. Please remove course assignments first.'
-          );
-        }
-      }
+  
 
 
 
-      const updatedUser = await this.usersRepository.findByIdAndUpdate(id, updateUserDto, { new: true });
+      const updatedUser = await this.usersRepository.findOneAndUpdate({ _id: id }, updateUserDto);
       
       return {
         message: 'User updated successfully',
