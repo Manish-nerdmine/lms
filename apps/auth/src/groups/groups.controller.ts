@@ -73,6 +73,17 @@ export class GroupsController {
     return this.groupsService.assignCourseToGroup(groupId, assignCourseDto);
   }
 
+  @Delete(':id/course/:courseId')
+  @ApiOperation({ summary: 'Remove a course assignment from a group' })
+  @ApiResponse({ status: 200, description: 'Course removed from group successfully' })
+  @ApiResponse({ status: 404, description: 'Group not found or course not assigned to group' })
+  removeCourseFromGroup(
+    @Param('id') groupId: string,
+    @Param('courseId') courseId: string,
+  ) {
+    return this.groupsService.removeCourseFromGroup(groupId, courseId);
+  }
+
   @Put(':id')
   @ApiOperation({ summary: 'Update a group' })
   @ApiResponse({ status: 404, description: 'Group not found' })

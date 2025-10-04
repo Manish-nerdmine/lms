@@ -25,5 +25,10 @@ export class CreateEmploymentDto {
   @ApiProperty({ example: true, description: 'Employee has accepted terms and conditions' })
   @IsBoolean()
   isTermsAccepted: boolean;
+
+  @ApiProperty({ example: '657e902c4b628d1f0fc8f09', description: 'Group ID (optional)', required: false })
+  @IsOptional()
+  @IsMongoId()
+  groupId?: string;
 }
 

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Group } from '@app/common/models/group.schema';
@@ -19,6 +19,30 @@ export class GroupsService {
     @InjectModel(Course.name) private readonly courseModel: Model<Course>,
     private readonly emailService: EmailService,
   ) {}
+
+  /**
+   * Check if a group has any courses assigned
+   * @param groupId - The group ID to check
+   * @returns boolean indicating if group has courses assigned
+   */
+  private async hasCoursesAssigned(groupId: string): Promise<boolean> {
+    const group = await this.groupModel.findById(groupId).exec();
+    return group && group.courses && group.courses.length > 0;
+  }
+
+  /**
+   * Validate that group modifications are allowed (no courses assigned)
+   * @param groupId - The group ID to validate
+   * @throws ForbiddenException if group has courses assigned
+   */
+  private async validateGroupModificationAllowed(groupId: string): Promise<void> {
+    const hasCourses = await this.hasCoursesAssigned(groupId);
+    if (hasCourses) {
+      throw new ForbiddenException(
+        'Cannot modify group membership when courses are assigned. Please remove all course assignments first.'
+      );
+    }
+  }
 
   async create(createGroupDto: CreateGroupDto): Promise<Group> {
     // Check if group name already exists
@@ -287,10 +311,50 @@ export class GroupsService {
   }
 
   async remove(id: string): Promise<void> {
+    // Check if group has courses assigned
+    const hasCourses = await this.hasCoursesAssigned(id);
+    if (hasCourses) {
+      throw new ForbiddenException(
+        'Cannot delete group with assigned courses. Please remove all course assignments first.'
+      );
+    }
+
     const result = await this.groupModel.deleteOne({ _id: id }).exec();
     if (result.deletedCount === 0) {
       throw new NotFoundException('Group not found');
     }
+  }
+
+  /**
+   * Remove a course assignment from a group
+   * @param groupId - The group ID
+   * @param courseId - The course ID to remove
+   * @returns Updated group or throws error
+   */
+  async removeCourseFromGroup(groupId: string, courseId: string): Promise<any> {
+    // Verify group exists
+    const group = await this.groupModel.findById(groupId).exec();
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    // Check if course is assigned to the group
+    const courseIndex = group.courses.findIndex(c => c.courseId.toString() === courseId);
+    if (courseIndex === -1) {
+      throw new NotFoundException('Course is not assigned to this group');
+    }
+
+    // Remove the course assignment
+    const updatedGroup = await this.groupModel.findByIdAndUpdate(
+      groupId,
+      { $pull: { courses: { courseId: courseId } } },
+      { new: true }
+    ).exec();
+
+    return {
+      message: 'Course removed from group successfully',
+      group: updatedGroup
+    };
   }
 
   async getGroupStats(id: string) {
@@ -377,7 +441,7 @@ export class GroupsService {
             fullName: user.fullName,
             type: 'user',
             linkType: 'login',
-            link: "http://195.35.21.108:5175/auth/signup"
+            link: "http://195.35.21.108:5175/auth/signup?email=" + user.email + "&name=" + user.fullName + "&role=" + user.userType
           })));
         }
         
@@ -390,7 +454,7 @@ export class GroupsService {
             
             let link;
             if (isExistingEmployee) {
-              link = "http://195.35.21.108:5175/auth/login";
+              link = "http://195.35.21.108:5175/auth/login?email=" + emp.email + "&name=" + emp.fullName + "&role=" + emp.role;
             } else {
               // Create signup link with query parameters
               const params = new URLSearchParams({
@@ -398,7 +462,7 @@ export class GroupsService {
                 name: emp.fullName,
                 role: emp.role
               });
-              link = `http://195.35.21.108:5175/auth/signup?${params.toString()}`;
+              link = `http://195.35.21.108:5175/auth/signup?email=${emp.email}&name=${emp.fullName}&role=${emp.role}`;
             }
             
             return {
@@ -420,7 +484,8 @@ export class GroupsService {
               link: recipient.link
             })),
             course.title,
-            group.name
+            group.name,
+            assignCourseDto.dueDate
           );
         }
       } catch (error) {

@@ -45,6 +45,8 @@ export class UsersRepository extends AbstractRepository<UserDocument> {
       update.groupId = new Types.ObjectId(update.groupId);
     }
     
+    // Convert departmentId string to ObjectId if provided
+    
     return this.model.findByIdAndUpdate(id, update, options).exec();
   }
 

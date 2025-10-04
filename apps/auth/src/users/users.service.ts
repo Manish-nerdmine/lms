@@ -1,4 +1,4 @@
-import { Injectable, UnprocessableEntityException, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, UnprocessableEntityException, BadRequestException, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -123,11 +123,28 @@ export class UsersService {
         }
       }
 
-      // If groupId is provided, validate it exists
+      // If groupId is provided, validate it exists and check for course assignments
       if (updateUserDto.groupId) {
         const group = await this.groupModel.findById(updateUserDto.groupId).exec();
         if (!group) {
           throw new NotFoundException('Group not found');
+        }
+        
+        // Check if the group has courses assigned
+        if (group.courses && group.courses.length > 0) {
+          throw new ForbiddenException(
+            'Cannot assign user to group with assigned courses. Please remove course assignments first.'
+          );
+        }
+      }
+
+      // If user is being moved from a group with courses, prevent the update
+      if (existingUser.groupId && updateUserDto.groupId !== existingUser.groupId.toString()) {
+        const currentGroup = await this.groupModel.findById(existingUser.groupId).exec();
+        if (currentGroup && currentGroup.courses && currentGroup.courses.length > 0) {
+          throw new ForbiddenException(
+            'Cannot move user from group with assigned courses. Please remove course assignments first.'
+          );
         }
       }
 
@@ -141,10 +158,7 @@ export class UsersService {
         data: updatedUser
       };
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof ConflictException) {
-        throw error;
-      }
-      throw new BadRequestException('Error updating user');
+      console.log(error);
     }
   }
 
@@ -156,6 +170,16 @@ export class UsersService {
         throw new NotFoundException('User not found');
       }
 
+      // Check if user belongs to a group with assigned courses
+      if (existingUser.groupId) {
+        const group = await this.groupModel.findById(existingUser.groupId).exec();
+        if (group && group.courses && group.courses.length > 0) {
+          throw new ForbiddenException(
+            'Cannot delete user from group with assigned courses. Please remove course assignments first.'
+          );
+        }
+      }
+
       // Delete user
       await this.usersRepository.findByIdAndDelete(id);
       
@@ -164,7 +188,7 @@ export class UsersService {
         deletedUserId: id
       };
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
         throw error;
       }
       throw new BadRequestException('Error deleting user');

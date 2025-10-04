@@ -13,7 +13,7 @@ export class UserDocument extends AbstractDocument {
   companyId?: number;
 
 
-  @Prop( { Type: String })
+  @Prop({ type: String })
   userType: string;
 
 

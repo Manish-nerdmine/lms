@@ -1,4 +1,4 @@
-import { Injectable, UnprocessableEntityException, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, UnprocessableEntityException, BadRequestException, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateEmploymentDto } from './dto/create-employment.dto';
@@ -33,12 +33,27 @@ export class EmploymentService {
         throw new BadRequestException('Email must exist in user schema to create employment record');
       }
 
+      // Validate group exists if provided and check for course assignments
+      if (createEmploymentDto.groupId) {
+        const group = await this.groupModel.findById(createEmploymentDto.groupId).exec();
+        if (!group) {
+          throw new NotFoundException('Group not found');
+        }
+        
+        // Check if the group has courses assigned
+        if (group.courses && group.courses.length > 0) {
+          throw new ForbiddenException(
+            'Cannot assign employee to group with assigned courses. Please remove course assignments first.'
+          );
+        }
+      }
+
       // Set isActive to true by default
       createEmploymentDto['isActive'] = true;
 
       return await this.employmentRepository.createEmployment(createEmploymentDto);
     } catch (err) {
-      if (err instanceof NotFoundException || err instanceof BadRequestException) {
+      if (err instanceof NotFoundException || err instanceof BadRequestException || err instanceof ForbiddenException) {
         throw err;
       }
       throw new UnprocessableEntityException(err.message);
@@ -192,6 +207,99 @@ export class EmploymentService {
       };
     } catch (error) {
       if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new UnprocessableEntityException(error.message);
+    }
+  }
+
+  /**
+   * Update employment record
+   * @param id - Employment ID
+   * @param updateData - Data to update
+   * @returns Updated employment record
+   */
+  async updateEmployment(id: string, updateData: any) {
+    try {
+      // Check if employment exists
+      const existingEmployment = await this.employmentRepository.findById(id);
+      if (!existingEmployment) {
+        throw new NotFoundException('Employment record not found');
+      }
+
+      // If groupId is being updated, validate it exists and check for course assignments
+      if (updateData.groupId) {
+        const group = await this.groupModel.findById(updateData.groupId).exec();
+        if (!group) {
+          throw new NotFoundException('Group not found');
+        }
+        
+        // Check if the group has courses assigned
+        if (group.courses && group.courses.length > 0) {
+          throw new ForbiddenException(
+            'Cannot assign employee to group with assigned courses. Please remove course assignments first.'
+          );
+        }
+      }
+
+      // If employment is being moved from a group with courses, prevent the update
+      if (existingEmployment.groupId && updateData.groupId !== existingEmployment.groupId) {
+        const currentGroup = await this.groupModel.findById(existingEmployment.groupId).exec();
+        if (currentGroup && currentGroup.courses && currentGroup.courses.length > 0) {
+          throw new ForbiddenException(
+            'Cannot move employee from group with assigned courses. Please remove course assignments first.'
+          );
+        }
+      }
+
+      const updatedEmployment = await this.employmentRepository.update(id, updateData);
+      
+      return {
+        message: 'Employment updated successfully',
+        employment: updatedEmployment
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+        throw error;
+      }
+      throw new UnprocessableEntityException(error.message);
+    }
+  }
+
+  /**
+   * Delete employment record
+   * @param id - Employment ID
+   * @returns Success message
+   */
+  async deleteEmployment(id: string) {
+    try {
+      // Check if employment exists
+      const existingEmployment = await this.employmentRepository.findById(id);
+      if (!existingEmployment) {
+        throw new NotFoundException('Employment record not found');
+      }
+
+      // Check if employment belongs to a group with assigned courses
+      if (existingEmployment.groupId) {
+        const group = await this.groupModel.findById(existingEmployment.groupId).exec();
+        if (group && group.courses && group.courses.length > 0) {
+          throw new ForbiddenException(
+            'Cannot delete employee from group with assigned courses. Please remove course assignments first.'
+          );
+        }
+      }
+
+      const deleted = await this.employmentRepository.delete(id);
+      if (!deleted) {
+        throw new NotFoundException('Employment record not found');
+      }
+      
+      return {
+        message: 'Employment deleted successfully',
+        deletedEmploymentId: id
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
         throw error;
       }
       throw new UnprocessableEntityException(error.message);
