@@ -11,8 +11,7 @@ export class EmploymentRepository {
   ) {}
 
   async createEmployment(createEmploymentDto: any): Promise<EmploymentDocument> {
-    const employment = new this.employmentModel(createEmploymentDto);
-    return employment.save();
+    return await this.employmentModel.create(createEmploymentDto);
   }
 
   async findOneByEmail(email: string): Promise<EmploymentDocument | null> {

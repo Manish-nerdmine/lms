@@ -20,6 +20,7 @@ export class CreateEmploymentDto {
 
   @ApiProperty({ example: 'user', description: 'Role of the employee' })
   @IsOptional()
+  @IsString()
   role?: string;
 
   @ApiProperty({ example: true, description: 'Employee has accepted terms and conditions' })

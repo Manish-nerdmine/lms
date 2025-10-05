@@ -15,7 +15,7 @@ export class EmploymentDocument extends AbstractDocument {
   @Prop({ type: String, required: false, maxLength: 1000, select: false, default: null })
   password?: string;
 
-  @Prop({ type: String, default: 'user', enum: ['user', 'admin'] })
+  @Prop({ type: String, default: '' })
   role: string;
 
   @Prop({ type: String, maxLength: 200 })
