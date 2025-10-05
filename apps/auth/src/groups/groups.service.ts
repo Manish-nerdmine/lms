@@ -432,18 +432,18 @@ export class GroupsService {
         // Prepare recipients with different link types
         const allRecipients = [];
         
-        // // Add users (always get login link)
-        // if (users.length > 0) {
+        // Add users (always get login link)
+        if (users.length > 0) {
           
-        //   const usersWithEmail = users.filter(user => user.email);
-        //   allRecipients.push(...usersWithEmail.map(user => ({
-        //     email: user.email,
-        //     fullName: user.fullName,
-        //     type: 'user',
-        //     linkType: 'login',
-        //     link: "http://195.35.21.108:5175/signup?email=" + user.email + "&name=" + user.fullName + "&role=" + user.userType
-        //   })));
-        // }
+          const usersWithEmail = users.filter(user => user.email);
+          allRecipients.push(...usersWithEmail.map(user => ({
+            email: user.email,
+            fullName: user.fullName,
+            type: 'user',
+            linkType: 'signup',
+            link: "http://195.35.21.108:5175/signup?email=" + user.email + "&name=" + user.fullName + "&role=" + user.userType
+          })));
+        }
         
         // Add employees with appropriate link type
         if (employees.length > 0) {
