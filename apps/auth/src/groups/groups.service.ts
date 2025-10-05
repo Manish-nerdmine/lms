@@ -432,18 +432,18 @@ export class GroupsService {
         // Prepare recipients with different link types
         const allRecipients = [];
         
-        // Add users (always get login link)
-        if (users.length > 0) {
+        // // Add users (always get login link)
+        // if (users.length > 0) {
           
-          const usersWithEmail = users.filter(user => user.email);
-          allRecipients.push(...usersWithEmail.map(user => ({
-            email: user.email,
-            fullName: user.fullName,
-            type: 'user',
-            linkType: 'login',
-            link: "http://195.35.21.108:5175/auth/signup?email=" + user.email + "&name=" + user.fullName + "&role=" + user.userType
-          })));
-        }
+        //   const usersWithEmail = users.filter(user => user.email);
+        //   allRecipients.push(...usersWithEmail.map(user => ({
+        //     email: user.email,
+        //     fullName: user.fullName,
+        //     type: 'user',
+        //     linkType: 'login',
+        //     link: "http://195.35.21.108:5175/signup?email=" + user.email + "&name=" + user.fullName + "&role=" + user.userType
+        //   })));
+        // }
         
         // Add employees with appropriate link type
         if (employees.length > 0) {
@@ -454,7 +454,7 @@ export class GroupsService {
             
             let link;
             if (isExistingEmployee) {
-              link = "http://195.35.21.108:5175/auth/login?email=" + emp.email + "&name=" + emp.fullName + "&role=" + emp.role;
+              link = "http://195.35.21.108:5175/login?email=" + emp.email + "&name=" + emp.fullName + "&role=" + emp.role;
             } else {
               // Create signup link with query parameters
               const params = new URLSearchParams({
@@ -462,7 +462,7 @@ export class GroupsService {
                 name: emp.fullName,
                 role: emp.role
               });
-              link = `http://195.35.21.108:5175/auth/signup?email=${emp.email}&name=${emp.fullName}&role=${emp.role}`;
+              link = `http://195.35.21.108:5175/signup?email=${emp.email}&name=${emp.fullName}&role=${emp.role}`;
             }
             
             return {
