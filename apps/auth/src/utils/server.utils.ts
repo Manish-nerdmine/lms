@@ -27,7 +27,13 @@ export class ServerUtils {
     return `${baseUrl}/auth/api/v1/courses/${courseId}/videos/stream/${filename}`;
   }
 
-  static getThumbnailUrl(filename: string): string {
+  static getThumbnailUrl(courseId: string, filename: string): string {
+    const baseUrl = this.getServerBaseUrl();
+    return `${baseUrl}/auth/api/v1/courses/${courseId}/thumbnails/${filename}`;
+  }
+
+  // Legacy method for backward compatibility
+  static getLegacyThumbnailUrl(filename: string): string {
     const baseUrl = this.getServerBaseUrl();
     return `${baseUrl}/auth/api/v1/courses/thumbnails/${filename}`;
   }

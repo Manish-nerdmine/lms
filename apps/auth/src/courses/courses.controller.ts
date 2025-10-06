@@ -70,28 +70,41 @@ export class CoursesController {
     return this.coursesService.findOne(id);
   }
 
-  @Get('thumbnails/:filename')
-  async getThumbnail(
+  @Get(':courseId/thumbnails/:filename')
+  async getCourseThumbnail(
+    @Param('courseId') courseId: string,
     @Param('filename') filename: string,
     @Res({ passthrough: true }) response: Response,
   ) {
     // Decode the filename to handle URL encoding
     const decodedFilename = decodeURIComponent(filename);
     const uploadDir = this.coursesService.getUploadDir();
-    const filepath = path.join(uploadDir, decodedFilename);
+    let filepath = path.join(uploadDir, decodedFilename);
     
+    console.log('Course ID:', courseId);
     console.log('Original filename:', filename);
     console.log('Decoded filename:', decodedFilename);
     console.log('Upload directory:', uploadDir);
     console.log('Looking for thumbnail file:', filepath);
     console.log('File exists:', fs.existsSync(filepath));
     
-    // List all files in the directory for debugging
-    try {
-      const files = fs.readdirSync(uploadDir);
-      console.log('Available files in thumbnails directory:', files);
-    } catch (error) {
-      console.error('Error reading thumbnails directory:', error);
+    // If the exact filename doesn't exist, try to find a file that ends with this filename
+    if (!fs.existsSync(filepath)) {
+      try {
+        const files = fs.readdirSync(uploadDir);
+        console.log('Available files in thumbnails directory:', files);
+        
+        // Look for a file that ends with the requested filename (for UUID-prefixed files)
+        const matchingFile = files.find(file => file.endsWith(decodedFilename));
+        if (matchingFile) {
+          filepath = path.join(uploadDir, matchingFile);
+          console.log('Found matching file with UUID prefix:', matchingFile);
+          console.log('New filepath:', filepath);
+          console.log('File exists:', fs.existsSync(filepath));
+        }
+      } catch (error) {
+        console.error('Error reading thumbnails directory:', error);
+      }
     }
     
     if (!fs.existsSync(filepath)) {
@@ -126,6 +139,15 @@ export class CoursesController {
       'Content-Disposition': 'inline',
     });
     return new StreamableFile(stream);
+  }
+
+  // Keep the old endpoint for backward compatibility
+  @Get('thumbnails/:filename')
+  async getThumbnail(
+    @Param('filename') filename: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    return this.getCourseThumbnail('legacy', filename, response);
   }
 
   @Patch(':id')

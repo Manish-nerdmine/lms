@@ -36,11 +36,11 @@ export class CoursesService {
 
   async create(createCourseDto: CreateCourseDto, file?: Express.Multer.File): Promise<Course> {
     let thumbnailUrl = createCourseDto.thumbnail;
+    let filename: string | undefined;
 
     if (file) {
-      const filename = `${uuidv4()}-${file.originalname}`;
+      filename = `${uuidv4()}-${file.originalname}`;
       const filepath = path.join(this.uploadDir, filename);
-      thumbnailUrl = ServerUtils.getThumbnailUrl(filename);
 
       try {
         fs.writeFileSync(filepath, new Uint8Array(file.buffer));
@@ -51,24 +51,48 @@ export class CoursesService {
       }
     }
 
-    const course = new this.courseModel({
-      ...createCourseDto,
-      thumbnail: thumbnailUrl,
-    });
+    // Create the course first to get the ID
+    const course = new this.courseModel(createCourseDto);
+    const savedCourse = await course.save();
 
-    return course.save();
+    // Now generate the thumbnail URL with the course ID
+    if (filename) {
+      thumbnailUrl = ServerUtils.getThumbnailUrl(savedCourse._id.toString(), filename);
+      
+      // Update the course with the proper thumbnail URL and return the updated course
+      const updatedCourse = await this.courseModel.findByIdAndUpdate(
+        savedCourse._id,
+        { thumbnail: thumbnailUrl },
+        { new: true }
+      ).exec();
+      
+      this.logger.log(`Thumbnail URL generated: ${thumbnailUrl}`);
+      return updatedCourse;
+    }
+
+    return savedCourse;
   }
 
   async findAll(): Promise<any[]> {
     const courses = await this.courseModel.find().populate('videos').populate('quizzes').exec();
     
-    // Add video count to each course
+    // Add video count and fix thumbnail URLs for each course
     const coursesWithVideoCount = await Promise.all(
       courses.map(async (course) => {
         const videoCount = await this.videosService.getVideoCountByCourseId(course._id.toString());
+        
+        // Fix thumbnail URL format if needed
+        let thumbnailUrl = course.thumbnail;
+        if (thumbnailUrl && thumbnailUrl.includes('/thumbnails/') && !thumbnailUrl.includes(`/${course._id}/thumbnails/`)) {
+          // This is an old format URL, convert it to new format
+          const filename = path.basename(thumbnailUrl);
+          thumbnailUrl = ServerUtils.getThumbnailUrl(course._id.toString(), filename);
+        }
+        
         return {
           ...course.toObject(),
           videoCount,
+          thumbnail: thumbnailUrl,
         };
       })
     );
@@ -90,15 +114,25 @@ export class CoursesService {
     // Add video count to the course
     const videoCount = await this.videosService.getVideoCountByCourseId(id);
     
+    // Fix thumbnail URL format if needed
+    let thumbnailUrl = course.thumbnail;
+    if (thumbnailUrl && thumbnailUrl.includes('/thumbnails/') && !thumbnailUrl.includes(`/${id}/thumbnails/`)) {
+      // This is an old format URL, convert it to new format
+      const filename = path.basename(thumbnailUrl);
+      thumbnailUrl = ServerUtils.getThumbnailUrl(id, filename);
+    }
+    
     return {
       ...course.toObject(),
       videoCount,
+      thumbnail: thumbnailUrl,
     };
   }
 
   async update(id: string, updateCourseDto: Partial<CreateCourseDto>, file?: Express.Multer.File): Promise<Course> {
     const course = await this.findOne(id);
     let thumbnailUrl = updateCourseDto.thumbnail;
+    let filename: string | undefined;
 
     if (file) {
       // Delete old thumbnail if exists
@@ -111,9 +145,8 @@ export class CoursesService {
       }
 
       // Save new thumbnail
-      const filename = `${uuidv4()}-${file.originalname}`;
+      filename = `${uuidv4()}-${file.originalname}`;
       const filepath = path.join(this.uploadDir, filename);
-      thumbnailUrl = ServerUtils.getThumbnailUrl(filename);
 
       try {
         fs.writeFileSync(filepath, new Uint8Array(file.buffer));
@@ -122,6 +155,11 @@ export class CoursesService {
         this.logger.error(`Failed to save thumbnail: ${error.message}`);
         throw new Error('Failed to save thumbnail');
       }
+    }
+
+    // Generate thumbnail URL with course ID if a new file was uploaded
+    if (filename) {
+      thumbnailUrl = ServerUtils.getThumbnailUrl(id, filename);
     }
 
     const updatedCourse = await this.courseModel
