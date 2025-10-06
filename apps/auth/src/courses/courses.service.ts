@@ -6,9 +6,11 @@ import { UserDocument } from '@app/common/models/user.schema';
 import { Group } from '@app/common/models/group.schema';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { CourseUsersProgressResponseDto } from './dto/course-users-progress.dto';
+import { VideosService } from '../videos/videos.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { ServerUtils } from '../utils/server.utils';
 
 @Injectable()
 export class CoursesService {
@@ -20,6 +22,7 @@ export class CoursesService {
     @InjectModel(UserProgress.name) private readonly userProgressModel: Model<UserProgress>,
     @InjectModel(UserDocument.name) private readonly userModel: Model<UserDocument>,
     @InjectModel(Group.name) private readonly groupModel: Model<Group>,
+    private readonly videosService: VideosService,
   ) {
     // Ensure upload directory exists
     if (!fs.existsSync(this.uploadDir)) {
@@ -33,7 +36,7 @@ export class CoursesService {
     if (file) {
       const filename = `${uuidv4()}-${file.originalname}`;
       const filepath = path.join(this.uploadDir, filename);
-      thumbnailUrl = `/courses/thumbnails/${filename}`;
+      thumbnailUrl = ServerUtils.getThumbnailUrl(filename);
 
       try {
         fs.writeFileSync(filepath, new Uint8Array(file.buffer));
@@ -52,11 +55,24 @@ export class CoursesService {
     return course.save();
   }
 
-  async findAll(): Promise<Course[]> {
-    return this.courseModel.find().populate('videos').populate('quizzes').exec();
+  async findAll(): Promise<any[]> {
+    const courses = await this.courseModel.find().populate('videos').populate('quizzes').exec();
+    
+    // Add video count to each course
+    const coursesWithVideoCount = await Promise.all(
+      courses.map(async (course) => {
+        const videoCount = await this.videosService.getVideoCountByCourseId(course._id.toString());
+        return {
+          ...course.toObject(),
+          videoCount,
+        };
+      })
+    );
+    
+    return coursesWithVideoCount;
   }
 
-  async findOne(id: string): Promise<Course> {
+  async findOne(id: string): Promise<any> {
     const course = await this.courseModel
       .findById(id)
       .populate('videos')
@@ -67,7 +83,13 @@ export class CoursesService {
       throw new NotFoundException('Course not found');
     }
 
-    return course;
+    // Add video count to the course
+    const videoCount = await this.videosService.getVideoCountByCourseId(id);
+    
+    return {
+      ...course.toObject(),
+      videoCount,
+    };
   }
 
   async update(id: string, updateCourseDto: Partial<CreateCourseDto>, file?: Express.Multer.File): Promise<Course> {
@@ -87,7 +109,7 @@ export class CoursesService {
       // Save new thumbnail
       const filename = `${uuidv4()}-${file.originalname}`;
       const filepath = path.join(this.uploadDir, filename);
-      thumbnailUrl = `/courses/thumbnails/${filename}`;
+      thumbnailUrl = ServerUtils.getThumbnailUrl(filename);
 
       try {
         fs.writeFileSync(filepath, new Uint8Array(file.buffer));
@@ -195,11 +217,321 @@ export class CoursesService {
       };
     });
 
+    const videoCount = await this.videosService.getVideoCountByCourseId(courseId);
+    
     return {
       courseId,
       courseTitle: course.title,
+      videoCount,
       totalUsers: usersWithProgress.length,
       users: usersWithProgress,
+    };
+  }
+
+  async getUserCompletedCourses(userId: string): Promise<any[]> {
+    // Find user's group
+    const user = await this.userModel.findById(userId).exec();
+    if (!user || !user.groupId) {
+      return [];
+    }
+
+    // Get user's group with assigned courses
+    const group = await this.groupModel.findById(user.groupId).exec();
+    if (!group || !group.courses || group.courses.length === 0) {
+      return [];
+    }
+
+    // Get all user progress records for this user
+    const userProgresses = await this.userProgressModel
+      .find({ userId })
+      .populate('courseId', 'title description thumbnail')
+      .exec();
+
+    // Create a map of course progress
+    const progressMap = new Map();
+    userProgresses.forEach(progress => {
+      const course = progress.courseId as any;
+      progressMap.set(course._id.toString(), {
+        progressPercentage: progress.progressPercentage,
+        completedVideos: progress.completedVideos,
+        completedQuizzes: progress.completedQuizzes,
+        lastUpdated: (progress as any).updatedAt,
+      });
+    });
+
+    // Filter completed courses (100% progress)
+    const completedCourses = [];
+    for (const courseAssignment of group.courses) {
+      const course = await this.courseModel.findById(courseAssignment.courseId).exec();
+      if (course) {
+        const progress = progressMap.get(course._id.toString());
+        if (progress && progress.progressPercentage >= 100) {
+          const videoCount = await this.videosService.getVideoCountByCourseId(course._id.toString());
+          completedCourses.push({
+            courseId: course._id.toString(),
+            title: course.title,
+            description: course.description,
+            thumbnail: course.thumbnail,
+            dueDate: courseAssignment.dueDate,
+            progressPercentage: progress.progressPercentage,
+            completedVideos: progress.completedVideos,
+            completedQuizzes: progress.completedQuizzes,
+            videoCount,
+            completedAt: progress.lastUpdated,
+          });
+        }
+      }
+    }
+
+    return completedCourses;
+  }
+
+  async getUserTodoCourses(userId: string): Promise<any[]> {
+    // Find user's group
+    const user = await this.userModel.findById(userId).exec();
+    if (!user || !user.groupId) {
+      return [];
+    }
+
+    // Get user's group with assigned courses
+    const group = await this.groupModel.findById(user.groupId).exec();
+    if (!group || !group.courses || group.courses.length === 0) {
+      return [];
+    }
+
+    // Get all user progress records for this user
+    const userProgresses = await this.userProgressModel
+      .find({ userId })
+      .populate('courseId', 'title description thumbnail')
+      .exec();
+
+    // Create a map of course progress
+    const progressMap = new Map();
+    userProgresses.forEach(progress => {
+      const course = progress.courseId as any;
+      progressMap.set(course._id.toString(), {
+        progressPercentage: progress.progressPercentage,
+        completedVideos: progress.completedVideos,
+        completedQuizzes: progress.completedQuizzes,
+        lastUpdated: (progress as any).updatedAt,
+      });
+    });
+
+    // Filter pending courses (not 100% progress and not overdue)
+    const todoCourses = [];
+    const currentDate = new Date();
+
+    for (const courseAssignment of group.courses) {
+      const course = await this.courseModel.findById(courseAssignment.courseId).exec();
+      if (course) {
+        const progress = progressMap.get(course._id.toString());
+        const progressPercentage = progress ? progress.progressPercentage : 0;
+        const isNotOverdue = courseAssignment.dueDate > currentDate;
+
+        if (progressPercentage < 100 && isNotOverdue) {
+          const videoCount = await this.videosService.getVideoCountByCourseId(course._id.toString());
+          todoCourses.push({
+            courseId: course._id.toString(),
+            title: course.title,
+            description: course.description,
+            thumbnail: course.thumbnail,
+            dueDate: courseAssignment.dueDate,
+            progressPercentage: progressPercentage,
+            completedVideos: progress ? progress.completedVideos : [],
+            completedQuizzes: progress ? progress.completedQuizzes : [],
+            videoCount,
+            daysRemaining: Math.ceil((courseAssignment.dueDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)),
+          });
+        }
+      }
+    }
+
+    return todoCourses;
+  }
+
+  async getUserOverdueCourses(userId: string): Promise<any[]> {
+    // Find user's group
+    const user = await this.userModel.findById(userId).exec();
+    if (!user || !user.groupId) {
+      return [];
+    }
+
+    // Get user's group with assigned courses
+    const group = await this.groupModel.findById(user.groupId).exec();
+    if (!group || !group.courses || group.courses.length === 0) {
+      return [];
+    }
+
+    // Get all user progress records for this user
+    const userProgresses = await this.userProgressModel
+      .find({ userId })
+      .populate('courseId', 'title description thumbnail')
+      .exec();
+
+    // Create a map of course progress
+    const progressMap = new Map();
+    userProgresses.forEach(progress => {
+      const course = progress.courseId as any;
+      progressMap.set(course._id.toString(), {
+        progressPercentage: progress.progressPercentage,
+        completedVideos: progress.completedVideos,
+        completedQuizzes: progress.completedQuizzes,
+        lastUpdated: (progress as any).updatedAt,
+      });
+    });
+
+    // Filter overdue courses (due date passed and not 100% complete)
+    const overdueCourses = [];
+    const currentDate = new Date();
+
+    for (const courseAssignment of group.courses) {
+      const course = await this.courseModel.findById(courseAssignment.courseId).exec();
+      if (course) {
+        const progress = progressMap.get(course._id.toString());
+        const progressPercentage = progress ? progress.progressPercentage : 0;
+        const isOverdue = courseAssignment.dueDate < currentDate;
+
+        if (progressPercentage < 100 && isOverdue) {
+          const daysOverdue = Math.ceil((currentDate.getTime() - courseAssignment.dueDate.getTime()) / (1000 * 60 * 60 * 24));
+          const videoCount = await this.videosService.getVideoCountByCourseId(course._id.toString());
+          
+          overdueCourses.push({
+            courseId: course._id.toString(),
+            title: course.title,
+            description: course.description,
+            thumbnail: course.thumbnail,
+            dueDate: courseAssignment.dueDate,
+            progressPercentage: progressPercentage,
+            completedVideos: progress ? progress.completedVideos : [],
+            completedQuizzes: progress ? progress.completedQuizzes : [],
+            videoCount,
+            daysOverdue: daysOverdue,
+          });
+        }
+      }
+    }
+
+    return overdueCourses;
+  }
+
+  async getUserCourseStatus(userId: string): Promise<any> {
+    // Find user's group
+    const user = await this.userModel.findById(userId).exec();
+    if (!user || !user.groupId) {
+      return {
+        completed: [],
+        todo: [],
+        overdue: [],
+        summary: {
+          total: 0,
+          completed: 0,
+          pending: 0,
+          overdue: 0,
+          completionRate: 0,
+        },
+      };
+    }
+
+    // Get user's group with assigned courses
+    const group = await this.groupModel.findById(user.groupId).exec();
+    if (!group || !group.courses || group.courses.length === 0) {
+      return {
+        completed: [],
+        todo: [],
+        overdue: [],
+        summary: {
+          total: 0,
+          completed: 0,
+          pending: 0,
+          overdue: 0,
+          completionRate: 0,
+        },
+      };
+    }
+
+    // Get all user progress records for this user
+    const userProgresses = await this.userProgressModel
+      .find({ userId })
+      .populate('courseId', 'title description thumbnail')
+      .exec();
+
+    // Create a map of course progress
+    const progressMap = new Map();
+    userProgresses.forEach(progress => {
+      const course = progress.courseId as any;
+      progressMap.set(course._id.toString(), {
+        progressPercentage: progress.progressPercentage,
+        completedVideos: progress.completedVideos,
+        completedQuizzes: progress.completedQuizzes,
+        lastUpdated: (progress as any).updatedAt,
+      });
+    });
+
+    const completedCourses = [];
+    const todoCourses = [];
+    const overdueCourses = [];
+    const currentDate = new Date();
+
+    for (const courseAssignment of group.courses) {
+      const course = await this.courseModel.findById(courseAssignment.courseId).exec();
+      if (course) {
+        const progress = progressMap.get(course._id.toString());
+        const progressPercentage = progress ? progress.progressPercentage : 0;
+        const isOverdue = courseAssignment.dueDate < currentDate;
+        const isCompleted = progressPercentage >= 100;
+
+        const videoCount = await this.videosService.getVideoCountByCourseId(course._id.toString());
+        
+        const courseData = {
+          courseId: course._id.toString(),
+          title: course.title,
+          description: course.description,
+          thumbnail: course.thumbnail,
+          dueDate: courseAssignment.dueDate,
+          progressPercentage: progressPercentage,
+          completedVideos: progress ? progress.completedVideos : [],
+          completedQuizzes: progress ? progress.completedQuizzes : [],
+          videoCount,
+        };
+
+        if (isCompleted) {
+          completedCourses.push({
+            ...courseData,
+            completedAt: progress.lastUpdated,
+          });
+        } else if (isOverdue) {
+          const daysOverdue = Math.ceil((currentDate.getTime() - courseAssignment.dueDate.getTime()) / (1000 * 60 * 60 * 24));
+          overdueCourses.push({
+            ...courseData,
+            daysOverdue: daysOverdue,
+          });
+        } else {
+          const daysRemaining = Math.ceil((courseAssignment.dueDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
+          todoCourses.push({
+            ...courseData,
+            daysRemaining: daysRemaining,
+          });
+        }
+      }
+    }
+
+    const total = group.courses.length;
+    const completed = completedCourses.length;
+    const pending = todoCourses.length;
+    const overdue = overdueCourses.length;
+    const completionRate = total > 0 ? (completed / total) * 100 : 0;
+
+    return {
+      completed: completedCourses,
+      todo: todoCourses,
+      overdue: overdueCourses,
+      summary: {
+        total,
+        completed,
+        pending,
+        overdue,
+        completionRate: Math.round(completionRate * 100) / 100,
+      },
     };
   }
 } 

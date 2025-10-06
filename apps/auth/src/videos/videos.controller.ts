@@ -68,7 +68,22 @@ export class VideosController {
     @Body() createVideoDto: CreateVideoDto,
     @Param('courseId') courseId: string,
   ) {
-    return this.videosService.uploadVideo(file, createVideoDto, courseId);
+    try {
+      if (!file && !createVideoDto.videoUrl) {
+        throw new BadRequestException('Either video file or videoUrl must be provided');
+      }
+
+      const result = await this.videosService.uploadVideo(file, createVideoDto, courseId);
+      
+      return {
+        success: true,
+        message: 'Video uploaded successfully',
+        data: result,
+        streamingUrl: (result as any).streamingUrl,
+      };
+    } catch (error) {
+      throw new BadRequestException(error.message || 'Failed to upload video');
+    }
   }
 
   @Get()
@@ -105,5 +120,25 @@ export class VideosController {
   @Delete(':id')
   async remove(@Param('id') id: string) {
     return this.videosService.remove(id);
+  }
+
+  @Get('check/:filename')
+  async checkVideoExists(@Param('filename') filename: string) {
+    try {
+      const { stream, mimeType } = await this.videosService.getVideoStream(filename);
+      return {
+        exists: true,
+        filename,
+        mimeType,
+        message: 'Video file found',
+      };
+    } catch (error) {
+      return {
+        exists: false,
+        filename,
+        message: 'Video file not found',
+        error: error.message,
+      };
+    }
   }
 } 

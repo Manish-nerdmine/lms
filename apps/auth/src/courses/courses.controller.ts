@@ -121,4 +121,187 @@ export class CoursesController {
   ): Promise<CourseUsersProgressResponseDto> {
     return this.coursesService.getCourseUsersWithProgress(id);
   }
+
+  @Get('user/:userId/completed')
+  @ApiTags('courses')
+  @ApiParam({ name: 'userId', description: 'User ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns all completed courses for the user',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          courseId: { type: 'string' },
+          title: { type: 'string' },
+          description: { type: 'string' },
+          thumbnail: { type: 'string' },
+          dueDate: { type: 'string', format: 'date-time' },
+          progressPercentage: { type: 'number' },
+          completedVideos: { type: 'array', items: { type: 'string' } },
+          completedQuizzes: { type: 'array', items: { type: 'string' } },
+          videoCount: { type: 'number' },
+          completedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found or no group assigned',
+  })
+  getUserCompletedCourses(@Param('userId') userId: string) {
+    return this.coursesService.getUserCompletedCourses(userId);
+  }
+
+  @Get('user/:userId/todo')
+  @ApiTags('courses')
+  @ApiParam({ name: 'userId', description: 'User ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns all pending/todo courses for the user',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          courseId: { type: 'string' },
+          title: { type: 'string' },
+          description: { type: 'string' },
+          thumbnail: { type: 'string' },
+          dueDate: { type: 'string', format: 'date-time' },
+          progressPercentage: { type: 'number' },
+          completedVideos: { type: 'array', items: { type: 'string' } },
+          completedQuizzes: { type: 'array', items: { type: 'string' } },
+          videoCount: { type: 'number' },
+          daysRemaining: { type: 'number' },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found or no group assigned',
+  })
+  getUserTodoCourses(@Param('userId') userId: string) {
+    return this.coursesService.getUserTodoCourses(userId);
+  }
+
+  @Get('user/:userId/overdue')
+  @ApiTags('courses')
+  @ApiParam({ name: 'userId', description: 'User ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns all overdue courses for the user',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          courseId: { type: 'string' },
+          title: { type: 'string' },
+          description: { type: 'string' },
+          thumbnail: { type: 'string' },
+          dueDate: { type: 'string', format: 'date-time' },
+          progressPercentage: { type: 'number' },
+          completedVideos: { type: 'array', items: { type: 'string' } },
+          completedQuizzes: { type: 'array', items: { type: 'string' } },
+          videoCount: { type: 'number' },
+          daysOverdue: { type: 'number' },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found or no group assigned',
+  })
+  getUserOverdueCourses(@Param('userId') userId: string) {
+    return this.coursesService.getUserOverdueCourses(userId);
+  }
+
+  @Get('user/:userId/status')
+  @ApiTags('courses')
+  @ApiParam({ name: 'userId', description: 'User ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns comprehensive course status for the user including completed, todo, overdue courses and summary',
+    schema: {
+      type: 'object',
+      properties: {
+        completed: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              courseId: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string' },
+              thumbnail: { type: 'string' },
+              dueDate: { type: 'string', format: 'date-time' },
+              progressPercentage: { type: 'number' },
+              completedVideos: { type: 'array', items: { type: 'string' } },
+              completedQuizzes: { type: 'array', items: { type: 'string' } },
+              videoCount: { type: 'number' },
+              completedAt: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+        todo: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              courseId: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string' },
+              thumbnail: { type: 'string' },
+              dueDate: { type: 'string', format: 'date-time' },
+              progressPercentage: { type: 'number' },
+              completedVideos: { type: 'array', items: { type: 'string' } },
+              completedQuizzes: { type: 'array', items: { type: 'string' } },
+              videoCount: { type: 'number' },
+              daysRemaining: { type: 'number' },
+            },
+          },
+        },
+        overdue: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              courseId: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string' },
+              thumbnail: { type: 'string' },
+              dueDate: { type: 'string', format: 'date-time' },
+              progressPercentage: { type: 'number' },
+              completedVideos: { type: 'array', items: { type: 'string' } },
+              completedQuizzes: { type: 'array', items: { type: 'string' } },
+              videoCount: { type: 'number' },
+              daysOverdue: { type: 'number' },
+            },
+          },
+        },
+        summary: {
+          type: 'object',
+          properties: {
+            total: { type: 'number' },
+            completed: { type: 'number' },
+            pending: { type: 'number' },
+            overdue: { type: 'number' },
+            completionRate: { type: 'number' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found or no group assigned',
+  })
+  getUserCourseStatus(@Param('userId') userId: string) {
+    return this.coursesService.getUserCourseStatus(userId);
+  }
 } 

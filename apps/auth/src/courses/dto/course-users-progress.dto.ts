@@ -44,6 +44,9 @@ export class CourseUsersProgressResponseDto {
   @ApiProperty({ description: 'Course title' })
   courseTitle: string;
 
+  @ApiProperty({ description: 'Number of videos available in the course' })
+  videoCount: number;
+
   @ApiProperty({ description: 'Total number of users enrolled in the course' })
   totalUsers: number;
 

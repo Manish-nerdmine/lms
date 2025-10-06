@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { NestApplication, NestFactory } from '@nestjs/core';
 import { Transport } from '@nestjs/microservices';
 import { Logger } from 'nestjs-pino';
+import { Request, Response, NextFunction } from 'express';
 
 import {
   AUTH_ROUTE_PREFIX,
@@ -13,10 +14,19 @@ import {
 } from '@app/common';
 
 import { AuthModule } from './auth.module';
+import { ServerUtils } from './utils/server.utils';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestApplication>(AuthModule, { cors: true });
   const configService = app.get(ConfigService);
+
+  // Global middleware to automatically set server host from request
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const serverHost = `${req.protocol}://${req.get('host')}`;
+    ServerUtils.setRequestHost(req);
+    console.log(`🌐 Request: ${req.method} ${req.originalUrl} - Server Host: ${serverHost}`);
+    next();
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({

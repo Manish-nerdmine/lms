@@ -7,6 +7,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import * as ffmpeg from 'fluent-ffmpeg';
+import { ServerUtils } from '../utils/server.utils';
+
+const ALLOWED_VIDEO_FORMATS = [
+  'video/mp4',
+  'video/x-msvideo', // AVI
+  'video/quicktime', // MOV
+  'video/x-ms-wmv', // WMV
+  'video/x-matroska', // MKV
+  'video/webm', // WebM
+  'video/x-flv', // FLV
+];
 
 @Injectable()
 export class VideosService {
@@ -21,6 +32,7 @@ export class VideosService {
       fs.mkdirSync(this.uploadDir, { recursive: true });
     }
   }
+
 
   private async getVideoDuration(filePath: string): Promise<number> {
     return new Promise((resolve, reject) => {
@@ -42,13 +54,21 @@ export class VideosService {
     let duration: number | undefined;
 
     if (file) {
+      // Validate file type
+      if (!ALLOWED_VIDEO_FORMATS.includes(file.mimetype)) {
+        throw new Error(`Unsupported video format: ${file.mimetype}. Allowed formats: ${ALLOWED_VIDEO_FORMATS.join(', ')}`);
+      }
+
       filename = `${uuidv4()}-${file.originalname}`;
       const filepath = path.join(this.uploadDir, filename);
-      videoUrl = `/videos/stream/${filename}`;
+      
+      // Generate full URL for the video using server host
+      videoUrl = ServerUtils.getVideoStreamUrl(courseId, filename);
+      console.log('Video URL:', videoUrl);
 
       // Save file to disk
       try {
-        fs.writeFileSync(filepath, file.buffer);
+        fs.writeFileSync(filepath, file.buffer as any);
         this.logger.log(`Video file saved successfully at ${filepath}`);
 
         // Get video duration
@@ -78,7 +98,15 @@ export class VideosService {
       order: await this.getNextOrder(courseId),
     });
 
-    return video.save();
+    const savedVideo = await video.save();
+    
+    // Return enhanced response with accessible URL
+    return {
+      ...savedVideo.toObject(),
+      message: 'Video uploaded successfully',
+      success: true,
+      streamingUrl: videoUrl,
+    } as any;
   }
 
   private async getNextOrder(courseId: string): Promise<number> {
@@ -89,16 +117,34 @@ export class VideosService {
     return lastVideo ? lastVideo.order + 1 : 0;
   }
 
-  async findAll(courseId: string): Promise<Video[]> {
-    return this.videoModel.find({ courseId }).sort({ order: 1 }).exec();
+  async findAll(courseId: string): Promise<any[]> {
+    const videos = await this.videoModel.find({ courseId }).sort({ order: 1 }).exec();
+    
+    // Enhance videos with streaming URLs
+    return videos.map(video => {
+      const videoObj = video.toObject();
+      const filename = path.basename(videoObj.videoUrl);
+      return {
+        ...videoObj,
+        streamingUrl: ServerUtils.getVideoStreamUrl(courseId, filename),
+      };
+    });
   }
 
-  async findOne(id: string): Promise<Video> {
+  async findOne(id: string): Promise<any> {
     const video = await this.videoModel.findById(id).exec();
     if (!video) {
       throw new NotFoundException('Video not found');
     }
-    return video;
+    
+    // Enhance video with streaming URL
+    const videoObj = video.toObject();
+    const filename = path.basename(videoObj.videoUrl);
+    
+    return {
+      ...videoObj,
+      streamingUrl: ServerUtils.getVideoStreamUrl(videoObj.courseId.toString(), filename),
+    };
   }
 
   async remove(id: string): Promise<void> {
@@ -123,7 +169,36 @@ export class VideosService {
     }
 
     const stream = fs.createReadStream(filepath);
-    const mimeType = 'video/mp4'; // You might want to determine this based on the file extension
+    
+    // Determine MIME type based on file extension
+    const extension = path.extname(filename).toLowerCase();
+    let mimeType = 'video/mp4'; // default
+    
+    switch (extension) {
+      case '.mp4':
+        mimeType = 'video/mp4';
+        break;
+      case '.avi':
+        mimeType = 'video/x-msvideo';
+        break;
+      case '.mov':
+        mimeType = 'video/quicktime';
+        break;
+      case '.wmv':
+        mimeType = 'video/x-ms-wmv';
+        break;
+      case '.mkv':
+        mimeType = 'video/x-matroska';
+        break;
+      case '.webm':
+        mimeType = 'video/webm';
+        break;
+      case '.flv':
+        mimeType = 'video/x-flv';
+        break;
+      default:
+        mimeType = 'video/mp4';
+    }
 
     return { stream, mimeType };
   }
@@ -158,5 +233,9 @@ export class VideosService {
     }
 
     return video;
+  }
+
+  async getVideoCountByCourseId(courseId: string): Promise<number> {
+    return this.videoModel.countDocuments({ courseId }).exec();
   }
 } 
