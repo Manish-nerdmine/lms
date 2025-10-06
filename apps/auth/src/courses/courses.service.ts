@@ -17,6 +17,10 @@ export class CoursesService {
   private readonly logger = new Logger(CoursesService.name);
   private readonly uploadDir = path.join(process.cwd(), 'apps/auth/src/courses/thumbnails');
 
+  getUploadDir(): string {
+    return this.uploadDir;
+  }
+
   constructor(
     @InjectModel(Course.name) private readonly courseModel: Model<Course>,
     @InjectModel(UserProgress.name) private readonly userProgressModel: Model<UserProgress>,

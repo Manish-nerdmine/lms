@@ -75,15 +75,54 @@ export class CoursesController {
     @Param('filename') filename: string,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const filepath = path.join(process.cwd(), 'apps/auth/src/courses/thumbnails', filename);
+    // Decode the filename to handle URL encoding
+    const decodedFilename = decodeURIComponent(filename);
+    const uploadDir = this.coursesService.getUploadDir();
+    const filepath = path.join(uploadDir, decodedFilename);
+    
+    console.log('Original filename:', filename);
+    console.log('Decoded filename:', decodedFilename);
+    console.log('Upload directory:', uploadDir);
+    console.log('Looking for thumbnail file:', filepath);
+    console.log('File exists:', fs.existsSync(filepath));
+    
+    // List all files in the directory for debugging
+    try {
+      const files = fs.readdirSync(uploadDir);
+      console.log('Available files in thumbnails directory:', files);
+    } catch (error) {
+      console.error('Error reading thumbnails directory:', error);
+    }
     
     if (!fs.existsSync(filepath)) {
+      console.error('Thumbnail not found at path:', filepath);
       throw new NotFoundException('Thumbnail not found');
     }
 
     const stream = fs.createReadStream(filepath);
+    
+    // Determine content type based on file extension
+    const extension = path.extname(decodedFilename).toLowerCase();
+    let contentType = 'image/jpeg'; // default
+    
+    switch (extension) {
+      case '.png':
+        contentType = 'image/png';
+        break;
+      case '.jpg':
+      case '.jpeg':
+        contentType = 'image/jpeg';
+        break;
+      case '.gif':
+        contentType = 'image/gif';
+        break;
+      case '.webp':
+        contentType = 'image/webp';
+        break;
+    }
+    
     response.set({
-      'Content-Type': 'image/jpeg',
+      'Content-Type': contentType,
       'Content-Disposition': 'inline',
     });
     return new StreamableFile(stream);
