@@ -65,17 +65,15 @@ export class CoursesController {
     return this.coursesService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.coursesService.findOne(id);
-  }
-
   @Get(':courseId/thumbnails/:filename')
   async getCourseThumbnail(
     @Param('courseId') courseId: string,
     @Param('filename') filename: string,
     @Res({ passthrough: true }) response: Response,
   ) {
+    console.log('🎯 THUMBNAIL ENDPOINT HIT!');
+    console.log('🔍 Route: /courses/:courseId/thumbnails/:filename');
+    
     // Decode the filename to handle URL encoding
     const decodedFilename = decodeURIComponent(filename);
     const uploadDir = this.coursesService.getUploadDir();
@@ -147,7 +145,14 @@ export class CoursesController {
     @Param('filename') filename: string,
     @Res({ passthrough: true }) response: Response,
   ) {
+    console.log('🔄 LEGACY THUMBNAIL ENDPOINT HIT!');
+    console.log('🔍 Route: /courses/thumbnails/:filename');
     return this.getCourseThumbnail('legacy', filename, response);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.coursesService.findOne(id);
   }
 
   @Patch(':id')
