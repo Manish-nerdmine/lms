@@ -148,6 +148,17 @@ export class EmploymentService {
     }
   }
 
+  async getAllEmployments(userId?: string) {
+    try {
+      if (userId) {
+        return await this.employmentRepository.find({ userId });
+      }
+      return await this.employmentRepository.findAll();
+    } catch (error) {
+      throw new UnprocessableEntityException(error.message);
+    }
+  }
+
   async getEmploymentWithUserInfo(email: string) {
     try {
       const result = await this.employmentRepository.findEmploymentWithUser(email);

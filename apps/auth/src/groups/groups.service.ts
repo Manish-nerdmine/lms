@@ -58,9 +58,11 @@ export class GroupsService {
     return group.save();
   }
 
-  async findAll(): Promise<Group[]> {
+  async findAll(userId?: string): Promise<Group[]> {
+    const filter = userId ? { userId } : {};
     return this.groupModel
-      .find()
+      .find(filter)
+      .populate('userId', 'fullName email')
       .sort({ createdAt: -1 })
       .exec();
   }
@@ -200,7 +202,7 @@ export class GroupsService {
   }
 
   async findOne(id: string): Promise<Group> {
-    const group = await this.groupModel.findById(id).exec();
+    const group = await this.groupModel.findById(id).populate('userId', 'fullName email').exec();
     
     if (!group) {
       throw new NotFoundException('Group not found');
@@ -261,12 +263,31 @@ export class GroupsService {
         }
       },
       {
+        $lookup: {
+          from: 'userdocuments',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'userDetails'
+        }
+      },
+      {
+        $unwind: {
+          path: '$userDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
         $project: {
           _id: 1,
           name: 1,
           description: 1,
           createdAt: 1,
           updatedAt: 1,
+          userId: 1,
+          userDetails: {
+            fullName: '$userDetails.fullName',
+            email: '$userDetails.email'
+          },
           users: 1,
           totalUsers: 1,
           totalCourses: 1,

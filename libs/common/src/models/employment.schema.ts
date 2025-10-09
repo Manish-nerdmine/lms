@@ -24,6 +24,8 @@ export class EmploymentDocument extends AbstractDocument {
   @Prop({ type: SchemaTypes.ObjectId, ref: 'Group', required: false })
   groupId?: Types.ObjectId;
 
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'User', required: false })
+  userId?: Types.ObjectId;
 
   @Prop({ type: Boolean, default: false })
   isActive?: boolean;

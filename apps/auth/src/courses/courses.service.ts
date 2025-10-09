@@ -73,8 +73,9 @@ export class CoursesService {
     return savedCourse;
   }
 
-  async findAll(): Promise<any[]> {
-    const courses = await this.courseModel.find().populate('videos').populate('quizzes').exec();
+  async findAll(userId?: string): Promise<any[]> {
+    const filter = userId ? { userId } : {};
+    const courses = await this.courseModel.find(filter).populate('videos').populate('quizzes').populate('userId', 'fullName email').exec();
     
     // Add video count and fix thumbnail URLs for each course
     const coursesWithVideoCount = await Promise.all(
@@ -105,6 +106,7 @@ export class CoursesService {
       .findById(id)
       .populate('videos')
       .populate('quizzes')
+      .populate('userId', 'fullName email')
       .exec();
 
     if (!course) {
@@ -574,6 +576,54 @@ export class CoursesService {
         overdue,
         completionRate: Math.round(completionRate * 100) / 100,
       },
+    };
+  }
+
+  async getCertificate(userId: string, courseId: string): Promise<any> {
+    // Fetch user details
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Fetch course details
+    const course = await this.courseModel.findById(courseId).exec();
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    // Fetch user progress for this course
+    const userProgress = await this.userProgressModel
+      .findOne({ userId, courseId })
+      .exec();
+
+    if (!userProgress) {
+      throw new NotFoundException('No progress found for this course');
+    }
+
+    // Check if course is completed (100% progress)
+    if (userProgress.progressPercentage < 100) {
+      throw new NotFoundException(
+        `Course not completed. Current progress: ${userProgress.progressPercentage}%`
+      );
+    }
+
+    // Generate a certificate ID (you can use a more sophisticated method)
+    const certificateId = `CERT-${userId.substring(0, 8).toUpperCase()}-${courseId.substring(0, 8).toUpperCase()}-${Date.now()}`;
+
+    return {
+      userId: user._id.toString(),
+      userName: user.fullName,
+      userEmail: user.email,
+      courseId: course._id.toString(),
+      courseName: course.title,
+      courseDescription: course.description,
+      completedAt: (userProgress as any).updatedAt,
+      progressPercentage: userProgress.progressPercentage,
+      completedVideos: userProgress.completedVideos.length,
+      completedQuizzes: userProgress.completedQuizzes.length,
+      certificateId: certificateId,
+      issuedDate: new Date(),
     };
   }
 } 

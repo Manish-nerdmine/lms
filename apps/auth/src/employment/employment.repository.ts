@@ -19,15 +19,15 @@ export class EmploymentRepository {
   }
 
   async findById(id: string): Promise<EmploymentDocument | null> {
-    return this.employmentModel.findById(id).exec();
+    return this.employmentModel.findById(id).populate('userId', 'fullName email').exec();
   }
 
   async findAll(): Promise<EmploymentDocument[]> {
-    return this.employmentModel.find().exec();
+    return this.employmentModel.find().populate('userId', 'fullName email').exec();
   }
 
   async update(id: string, updateData: any): Promise<EmploymentDocument | null> {
-    return this.employmentModel.findByIdAndUpdate(id, updateData, { new: true }).exec();
+    return this.employmentModel.findByIdAndUpdate(id, updateData, { new: true }).populate('userId', 'fullName email').exec();
   }
 
   async delete(id: string): Promise<boolean> {
@@ -52,6 +52,6 @@ export class EmploymentRepository {
   }
 
   async find(query: any): Promise<EmploymentDocument[]> {
-    return this.employmentModel.find(query).exec();
+    return this.employmentModel.find(query).populate('userId', 'fullName email').exec();
   }
 }

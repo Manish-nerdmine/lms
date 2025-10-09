@@ -9,6 +9,9 @@ export class Group extends Document {
   @Prop()
   description: string;
 
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
+  userId: string;
+
   @Prop({
     type: [{
       courseId: { type: MongooseSchema.Types.ObjectId, ref: 'Course', required: true },

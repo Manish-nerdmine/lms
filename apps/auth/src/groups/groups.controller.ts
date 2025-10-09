@@ -15,7 +15,7 @@ import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { AssignCourseDto } from './dto/assign-course.dto';
 import { PasscodeAuthGuard } from '@app/common/auth/passcode-auth.guard';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('groups')
 @Controller('groups')
@@ -32,8 +32,10 @@ export class GroupsController {
 
   @Get()
   @ApiOperation({ summary: 'Get all groups' })
-  findAll() {
-    return this.groupsService.findAll();
+  @ApiQuery({ name: 'userId', required: false, description: 'Filter groups by userId' })
+  @ApiResponse({ status: 200, description: 'List of all groups' })
+  findAll(@Query('userId') userId?: string) {
+    return this.groupsService.findAll(userId);
   }
 
   @Get('all-with-stats')

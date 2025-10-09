@@ -23,6 +23,7 @@ import { ApiTags, ApiConsumes, ApiBody, ApiParam, ApiResponse, ApiQuery } from '
 import * as fs from 'fs';
 import * as path from 'path';
 import { CourseUsersProgressResponseDto } from './dto/course-users-progress.dto';
+import { CertificateResponseDto } from './dto/certificate.dto';
 
 @ApiTags('courses')
 @Controller('courses')
@@ -61,8 +62,10 @@ export class CoursesController {
   }
 
   @Get()
-  findAll() {
-    return this.coursesService.findAll();
+  @ApiQuery({ name: 'userId', required: false, description: 'Filter courses by userId' })
+  @ApiResponse({ status: 200, description: 'List of all courses' })
+  findAll(@Query('userId') userId?: string) {
+    return this.coursesService.findAll(userId);
   }
 
   @Get(':courseId/thumbnails/:filename')
@@ -369,5 +372,25 @@ export class CoursesController {
   })
   getUserCourseStatus(@Param('userId') userId: string) {
     return this.coursesService.getUserCourseStatus(userId);
+  }
+
+  @Get('certificate')
+  @ApiTags('courses')
+  @ApiQuery({ name: 'userId', required: true, description: 'User ID' })
+  @ApiQuery({ name: 'courseId', required: true, description: 'Course ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns certificate data with course name and user name',
+    type: CertificateResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User or course not found, or course not completed',
+  })
+  getCertificate(
+    @Query('userId') userId: string,
+    @Query('courseId') courseId: string,
+  ): Promise<CertificateResponseDto> {
+    return this.coursesService.getCertificate(userId, courseId);
   }
 } 

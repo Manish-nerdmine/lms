@@ -96,8 +96,8 @@ export class EmailService {
 
         ${link ? `
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${link}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-              Sign Up & Start Learning
+            <a href="${link}" style="background-color: #667eea; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff !important; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); border: none;">
+              <span style="color: #ffffff;">Sign Up & Start Learning</span>
             </a>
           </div>
         ` : ''}
@@ -158,8 +158,8 @@ export class EmailService {
 
         ${link ? `
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${link}" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);">
-              Go to My Courses
+            <a href="${link}" style="background-color: #4CAF50; background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color:rgb(255, 255, 255) !important; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4); border: none;">
+              <span style="color: #ffffff;">Go to My Courses</span>
             </a>
           </div>
         ` : ''}

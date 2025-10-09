@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Schema as MongooseSchema } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class Employee extends Document {
@@ -14,6 +14,9 @@ export class Employee extends Document {
 
   @Prop()
   role: string;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
+  userId: string;
 
 }
 
