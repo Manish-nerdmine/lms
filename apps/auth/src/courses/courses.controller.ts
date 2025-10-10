@@ -64,7 +64,7 @@ export class CoursesController {
   @Get()
   @ApiQuery({ name: 'userId', required: false, description: 'Filter courses by userId' })
   @ApiResponse({ status: 200, description: 'List of all courses' })
-  findAll(@Query('userId') userId?: string) {
+  findAll(@Query('userId') userId: string) {
     return this.coursesService.findAll(userId);
   }
 

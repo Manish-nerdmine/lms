@@ -24,6 +24,7 @@ export class UsersController {
     return this.usersService.create(createUserDto);
   }
 
+
   @Post('login')
   async login(@Body()  loginAuthDto: LoginAuthDto) {
     return await this.usersService.Login(loginAuthDto)
@@ -42,9 +43,26 @@ export class UsersController {
   async getAllUsers(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
-   // @Query('search') search?: string,
+   @Query('userId') userId?: string,
   ) {
-    return this.usersService.getAllUsers(page, limit);
+    return this.usersService.getAllUsers(page, limit, userId);
+  }
+
+  @Get('download-template')
+  @ApiOperation({ 
+    summary: 'Download Excel template for user upload',
+    description: 'Download an Excel template with sample data including all required and optional fields: fullName, email, password, userType, companyName, country, isTermsAccepted, groupId, departmentId'
+  })
+  async downloadTemplate(@Res() res: Response) {
+    console.log('downloadTemplate');
+    const template = await this.usersService.downloadTemplate();
+    
+    res.set({
+      'Content-Type': template.contentType,
+      'Content-Disposition': `attachment; filename="${template.filename}"`,
+    });
+    
+    res.send(template.buffer);
   }
 
   @Get('group/:groupId')
@@ -137,21 +155,7 @@ export class UsersController {
     return this.usersService.uploadUsersFromExcel(file);
   }
 
-  @Get('download-template')
-  @ApiOperation({ 
-    summary: 'Download Excel template for user upload',
-    description: 'Download an Excel template with sample data including all required and optional fields: fullName, email, password, userType, companyName, country, isTermsAccepted, groupId, departmentId'
-  })
-  async downloadTemplate(@Res() res: Response) {
-    const template = await this.usersService.downloadTemplate();
-    
-    res.set({
-      'Content-Type': template.contentType,
-      'Content-Disposition': `attachment; filename="${template.filename}"`,
-    });
-    
-    res.send(template.buffer);
-  }
+
 
   @Get('available-groups')
   @UseGuards(PasscodeAuthGuard)

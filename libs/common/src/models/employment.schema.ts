@@ -18,8 +18,6 @@ export class EmploymentDocument extends AbstractDocument {
   @Prop({ type: String, default: '' })
   role: string;
 
-  @Prop({ type: String, maxLength: 200 })
-  position?: string;
 
   @Prop({ type: SchemaTypes.ObjectId, ref: 'Group', required: false })
   groupId?: Types.ObjectId;

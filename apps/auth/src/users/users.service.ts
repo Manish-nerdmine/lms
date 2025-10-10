@@ -1,6 +1,6 @@
 import { Injectable, UnprocessableEntityException, BadRequestException, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { GetUserDto } from './dto/get-user.dto';
@@ -12,12 +12,15 @@ import * as XLSX from 'xlsx';
 import { Response } from 'express';
 import { Group } from '@app/common/models/group.schema';
 import { Department } from '@app/common/models/department.schema';
+import { EmploymentRepository } from '../employment/employment.repository';
+
 
 @Injectable()
 export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository, 
     private readonly passcodeService: PasscodeService,
+    private readonly employmentRepository: EmploymentRepository,
     @InjectModel(Group.name) private readonly groupModel: Model<Group>,
     @InjectModel(Department.name) private readonly departmentModel: Model<Department>
   ) {}
@@ -34,15 +37,29 @@ export class UsersService {
         }
       }
 
-      // If departmentId is provided, validate it exists
-      // if (createUserDto.departmentId) {
-      //   const department = await this.departmentModel.findById(createUserDto.departmentId).exec();
-      //   if (!department) {
-      //     throw new NotFoundException('Department not found');
-      //   }
-      // }
+      // Create the user
+      const createdUser = await this.usersRepository.createUser(createUserDto);
 
-      return await this.usersRepository.createUser(createUserDto);
+      // Automatically create employment record with isActive: false
+      // User will activate this when they sign up through employee portal
+      try {
+        await this.employmentRepository.createEmployment({
+          fullName: createUserDto.fullName,
+          email: createUserDto.email || '',
+          role: createUserDto.userType || 'user',
+          isActive: false, // Will be set to true when user signs up in employee portal
+          groupId: createUserDto.groupId
+         
+          // Note: password is not set here - will be set when user signs up
+        }, createUserDto.userId);
+        
+        console.log(`Employment record created for user: ${createUserDto.email} (inactive - awaiting signup)`);
+      } catch (employmentError) {
+        // Log error but don't fail user creation
+        console.error('Failed to create employment record:', employmentError);
+      }
+
+      return createdUser;
     } catch (err) {
       if (err instanceof NotFoundException) {
         throw err;
@@ -175,7 +192,7 @@ export class UsersService {
     }
   }
 
-  async getAllUsers(page: number = 1, limit: number = 10, search?: string) {
+  async getAllUsers(page: number = 1, limit: number = 10, search?: string, userId?: string) {
    
     const skip = (page - 1) * limit;
     const matchQuery: any = {
@@ -183,39 +200,12 @@ export class UsersService {
       deleted: false,
     };
 
-    if (search) {
-      matchQuery.$or = [
-        { fullName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { companyName: { $regex: search, $options: 'i' } },
-      ];
-    }
 
-    // if (departmentId) {
-    //   matchQuery.departmentId = departmentId;
-    // }
-
-    // if (groupId) {
-    //   matchQuery.groupId = groupId;
-    // }
 
     // Use aggregation pipeline to lookup userType and group details
     const pipeline = [
       { $match: matchQuery },
-      // {
-      //   $lookup: {
-      //     from: 'usertypedocuments', // MongoDB collection name for UserType
-      //     localField: 'userType',
-      //     foreignField: '_id',
-      //     as: 'userTypeDetails'
-      //   }
-      // },
-      // {
-      //   $unwind: {
-      //     path: '$userTypeDetails',
-      //     preserveNullAndEmptyArrays: true
-      //   }
-      // },
+     
      
       {
         $lookup: {
@@ -231,30 +221,47 @@ export class UsersService {
           preserveNullAndEmptyArrays: true
         }
       },
-      // {
-      //   $addFields: {
-      //     userTypeName: { $arrayElemAt: ['$userTypeDetails.name', 0] },
-      //     userTypeDescription: { $arrayElemAt: ['$userTypeDetails.description', 0] },
-      //     groupName: { $arrayElemAt: ['$groupDetails.name', 0] },
-      //     groupDescription: { $arrayElemAt: ['$groupDetails.description', 0] }
-      //   }
-      // },
+      {
+        $lookup: {
+          from: 'employmentdocuments', // MongoDB collection name for Employment
+          localField: '_id',
+          foreignField: 'userId',
+          as: 'employmentDetails'
+        }
+      },
+      {
+        $unwind: {
+          path: '$employmentDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // Filter by userId if provided
+      ...(userId ? [{
+        $match: {
+          'employmentDetails.userId': new Types.ObjectId(userId)
+        }
+      }] : []),
+      // Search across user and employment fields
+      ...(search ? [{
+        $match: {
+          $or: [
+            { fullName: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } },
+            { companyName: { $regex: search, $options: 'i' } },
+            { 'employmentDetails.fullName': { $regex: search, $options: 'i' } },
+            { 'employmentDetails.email': { $regex: search, $options: 'i' } },
+            { 'employmentDetails.role': { $regex: search, $options: 'i' } },
+          ]
+        }
+      }] : []),
+     
               {
           $project: {
-            fullName: 1,
-            email: 1,
-            phone: 1,
-            companyName: 1,
-            userType: 1,
-            departmentId: 1,
-            groupId: 1,
-            companyId: 1,
-            country: 1,
-            isTermsAccepted: 1,
-            lastLoggedIn: 1,
-            createdAt: 1,
-            updatedAt: 1,
-            // userRole: '$userTypeDetails.name',
+            fullName: '$employmentDetails.fullName',
+            email: '$employmentDetails.email',
+            role: '$employmentDetails.role',
+            isActive: '$employmentDetails.isActive',
+            lastLoggedIn: '$employmentDetails.lastLoggedIn',
             groupName: '$groupDetails.name',
             
           }
@@ -264,8 +271,60 @@ export class UsersService {
     ];
 
     try {
+      // Get the total count with the same filters
+      const countPipeline = [
+        { $match: matchQuery },
+        {
+          $lookup: {
+            from: 'groups',
+            localField: 'groupId',
+            foreignField: '_id',
+            as: 'groupDetails'
+          }
+        },
+        {
+          $unwind: {
+            path: '$groupDetails',
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        {
+          $lookup: {
+            from: 'employmentdocuments',
+            localField: '_id',
+            foreignField: 'userId',
+            as: 'employmentDetails'
+          }
+        },
+        {
+          $unwind: {
+            path: '$employmentDetails',
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        ...(userId ? [{
+          $match: {
+            'employmentDetails.userId': new Types.ObjectId(userId)
+          }
+        }] : []),
+        ...(search ? [{
+          $match: {
+            $or: [
+              { fullName: { $regex: search, $options: 'i' } },
+              { email: { $regex: search, $options: 'i' } },
+              { companyName: { $regex: search, $options: 'i' } },
+              { 'employmentDetails.fullName': { $regex: search, $options: 'i' } },
+              { 'employmentDetails.email': { $regex: search, $options: 'i' } },
+              { 'employmentDetails.role': { $regex: search, $options: 'i' } },
+            ]
+          }
+        }] : []),
+        { $count: 'total' }
+      ];
+
       const users = await this.usersRepository.aggregate(pipeline);
-      const total = await this.usersRepository.countDocuments(matchQuery);
+      const countResult = await this.usersRepository.aggregate(countPipeline);
+      const total = countResult.length > 0 ? countResult[0].total : 0;
 
       return {
         users,
@@ -451,7 +510,6 @@ export class UsersService {
         departmentId: '',
       },
     ];
-
     const worksheet = XLSX.utils.json_to_sheet(template);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Users Template');

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { EmploymentDocument } from '@app/common/models/employment.schema';
 
 @Injectable()
@@ -10,8 +10,8 @@ export class EmploymentRepository {
     private readonly employmentModel: Model<EmploymentDocument>,
   ) {}
 
-  async createEmployment(createEmploymentDto: any): Promise<EmploymentDocument> {
-    return await this.employmentModel.create(createEmploymentDto);
+  async createEmployment(createEmploymentDto: any, userId: Types.ObjectId): Promise<EmploymentDocument> {
+    return await this.employmentModel.create({ ...createEmploymentDto, userId });
   }
 
   async findOneByEmail(email: string): Promise<EmploymentDocument | null> {

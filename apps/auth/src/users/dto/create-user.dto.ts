@@ -37,4 +37,9 @@ export class CreateUserDto {
   @IsOptional()
   @IsMongoId()
   groupId?: string;
+
+  @ApiProperty({ example: '657e902c4b628d1f0fc8f09e', description: 'User ID', required: false })
+  @IsOptional()
+  @IsMongoId()
+  userId?: Types.ObjectId;
 }

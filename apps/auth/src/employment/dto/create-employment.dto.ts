@@ -23,6 +23,10 @@ export class CreateEmploymentDto {
   @IsString()
   role?: string;
 
+  @ApiProperty({ example: '657e902c4b628d1f0fc8f09', description: 'User ID', required: true })
+  @IsNotEmpty()
+  userId: Types.ObjectId;
+
   @ApiProperty({ example: true, description: 'Employee has accepted terms and conditions' })
   @IsBoolean()
   isTermsAccepted: boolean;

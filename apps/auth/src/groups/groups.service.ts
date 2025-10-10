@@ -67,7 +67,7 @@ export class GroupsService {
       .exec();
   }
 
-  async findAllWithStats(page: number = 1, limit: number = 10) {
+  async findAllWithStats(page: number = 1, limit: number = 10, userId?: string) {
     // Ensure page and limit are valid numbers
     const pageNum = Math.max(1, parseInt(String(page)) || 1);
     const limitNum = Math.max(1, parseInt(String(limit)) || 10);
@@ -75,6 +75,11 @@ export class GroupsService {
     
     // Use aggregation to get groups with user and employee counts
     const pipeline = [
+      {
+        $match: {
+          userId: new Types.ObjectId(userId)
+        }
+      },
       {
         $lookup: {
           from: 'userdocuments', // MongoDB collection name for User
@@ -441,30 +446,30 @@ export class GroupsService {
         const users = await this.userModel.find({ groupId }).exec();
         
         // Get all employees in the group
-        const employees = await this.employmentModel.find({ groupId, isActive: true }).exec();
+        const employees = await this.employmentModel.find({ groupId }).exec();
         
         // Get existing employees (those who already have accounts)
         const employeeEmails = employees.map(emp => emp.email).filter(email => email);
         const existingEmployees = await this.employmentModel.find({ 
-          email: { $in: employeeEmails } 
+          email: { $in: employeeEmails, isActive: true } 
         }).exec();
         const existingEmployeeEmails = new Set(existingEmployees.map(emp => emp.email));
         
         // Prepare recipients with different link types
         const allRecipients = [];
         
-        // Add users (always get login link)
-        if (users.length > 0) {
+        // // Add users (always get login link)
+        // if (users.length > 0) {
           
-          const usersWithEmail = users.filter(user => user.email);
-          allRecipients.push(...usersWithEmail.map(user => ({
-            email: user.email,
-            fullName: user.fullName,
-            type: 'user',
-            linkType: 'signup',
-            link: "http://195.35.21.108:5175/signup?email=" + user.email + "&name=" + user.fullName + "&role=" + user.userType
-          })));
-        }
+        //   const usersWithEmail = users.filter(user => user.email);
+        //   allRecipients.push(...usersWithEmail.map(user => ({
+        //     email: user.email,
+        //     fullName: user.fullName,
+        //     type: 'user',
+        //     linkType: 'signup',
+        //     link: "http://195.35.21.108:5175/signup?email=" + user.email + "&name=" + user.fullName + "&role=" + user.userType
+        //   })));
+        // }
         
         // Add employees with appropriate link type
         if (employees.length > 0) {
@@ -475,7 +480,7 @@ export class GroupsService {
             
             let link;
             if (isExistingEmployee) {
-              link = "http://195.35.21.108:5175/login?email=" + emp.email + "&name=" + emp.fullName + "&role=" + emp.role;
+              link = "http://195.35.21.108:5175/login?email=" + emp.email + "&name=" + emp.fullName + "&role=" + emp.role ;
             } else {
               // Create signup link with query parameters
               const params = new URLSearchParams({

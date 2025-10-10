@@ -5,7 +5,7 @@ import { CreateEmploymentDto } from './dto/create-employment.dto';
 import { LoginEmploymentDto } from './dto/login-employment.dto';
 import { EmploymentRepository } from './employment.repository';
 import { PasscodeService } from '../passcode/passcode.service';
-import { getHashKeys, comparePassword } from '../utils/common.utils';
+import { getHashKeys, comparePassword, hashPassword } from '../utils/common.utils';
 import { Group } from '@app/common/models/group.schema';
 import { Department } from '@app/common/models/department.schema';
 import { UserDocument } from '@app/common/models/user.schema';
@@ -25,17 +25,43 @@ export class EmploymentService {
 
   async create(createEmploymentDto: CreateEmploymentDto) {
     try {
-     // await this.validateCreateEmploymentDto(createEmploymentDto);
-      
       // Check if user with this email exists (this is allowed for employment)
       const existingUser = await this.userModel.findOne({ email: createEmploymentDto.email }).exec();
       if (!existingUser) {
         throw new BadRequestException('Email must exist in user schema to create employment record');
       }
 
+      // Check if employment record already exists (created by admin when user was added)
+      const existingEmployment = await this.employmentRepository.findOneByEmail(createEmploymentDto.email);
+      
+      if (existingEmployment) {
+        // Employment record exists (created by admin), update it with signup details
+        // Set isActive to true and add password
+        const hashedPassword = createEmploymentDto.password 
+          ? await hashPassword(createEmploymentDto.password) 
+          : existingEmployment.password;
+
+        const updatedEmployment = await this.employmentRepository.update(
+          existingEmployment._id.toString(),
+          {
+            password: hashedPassword,
+            isActive: true, // Activate the account when user signs up
+            role: createEmploymentDto.role || existingEmployment.role,
+            fullName: createEmploymentDto.fullName || existingEmployment.fullName,
+          }
+        );
+
+        return {
+          message: 'Employment account activated successfully',
+          employment: updatedEmployment
+        };
+      }
+
+
+
       // Validate group exists if provided and check for course assignments
-      if (createEmploymentDto.groupId) {
-        const group = await this.groupModel.findById(createEmploymentDto.groupId).exec();
+      if (existingUser.groupId) {
+        const group = await this.groupModel.findById(existingUser.groupId).exec();
         if (!group) {
           throw new NotFoundException('Group not found');
         }
@@ -48,10 +74,15 @@ export class EmploymentService {
         }
       }
 
-    // Set isActive to true by default
-    createEmploymentDto['isActive'] = true;
+      // Hash password if provided
+      if (createEmploymentDto.password) {
+        createEmploymentDto.password = await hashPassword(createEmploymentDto.password);
+      }
 
-      return await this.employmentRepository.createEmployment(createEmploymentDto);
+      // Set isActive to true for new signups
+      createEmploymentDto['isActive'] = true;
+
+      return await this.employmentRepository.createEmployment(createEmploymentDto, createEmploymentDto.userId);
     } catch (err) {
       if (err instanceof NotFoundException || err instanceof BadRequestException || err instanceof ForbiddenException) {
         throw err;
@@ -73,6 +104,11 @@ export class EmploymentService {
     }
   }
 
+
+  async AddEmployment(createEmploymentDto: CreateEmploymentDto) {
+    return await this.employmentRepository.createEmployment(createEmploymentDto, createEmploymentDto.userId);
+  }
+
   async login(loginEmploymentDto: LoginEmploymentDto) {
   try {
     const employment = await this.employmentRepository.findOneByEmail(loginEmploymentDto.email);
@@ -87,12 +123,12 @@ export class EmploymentService {
     // Check if employment has a password set
     if (!employment.password) {
       throw new UnprocessableEntityException(
-        'No password set for this employment account. Please contact administrator.'
+        'No password set for this employment account. Please sign up first.'
       );
     }
 
-    // const passwordIsValid = await comparePassword(loginEmploymentDto.password, employment.password);
-    const passwordIsValid = employment.password === loginEmploymentDto.password;
+    // Verify password using hash comparison
+    const passwordIsValid = await comparePassword(loginEmploymentDto.password, employment.password);
     if (!passwordIsValid) {
       throw new UnprocessableEntityException('Invalid Password.');
     }
@@ -120,7 +156,7 @@ export class EmploymentService {
     return {
       message: 'Login successful',
       employmentId: employment._id,
-      userId: user._id,              
+      userId: employment.userId,            
       token: passcodeInfo.passcode,
       role: employment.role,
       groupId: group?._id ?? null,

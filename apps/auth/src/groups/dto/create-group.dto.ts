@@ -11,4 +11,9 @@ export class CreateGroupDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiProperty({ description: 'User ID of the group', required: false })
+  @IsNotEmpty()
+  @IsString()
+  userId?: string;
 } 

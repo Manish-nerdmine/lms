@@ -238,4 +238,16 @@ export class VideosService {
   async getVideoCountByCourseId(courseId: string): Promise<number> {
     return this.videoModel.countDocuments({ courseId }).exec();
   }
+
+  async updateVideoDetails(
+    videoId: string, 
+    updateData: { title?: string; description?: string }
+  ): Promise<Video> {
+    const video = await this.findOne(videoId);
+    if (!video) {
+      throw new Error('Video not found');
+    }
+
+    return await this.videoModel.findOneAndUpdate({ _id: videoId }, updateData, { new: true }).exec();
+  }
 } 

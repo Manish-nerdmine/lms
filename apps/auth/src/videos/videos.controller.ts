@@ -141,4 +141,12 @@ export class VideosController {
       };
     }
   }
+
+  @Put(':id')
+  async updateVideoDetails(
+    @Param('id') id: string,
+    @Body() updateData: { title?: string; description?: string },
+  ) {
+    return this.videosService.updateVideoDetails(id, updateData);
+  }
 } 
