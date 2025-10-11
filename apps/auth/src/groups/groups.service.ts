@@ -222,10 +222,10 @@ export class GroupsService {
       },
       {
         $lookup: {
-          from: 'userdocuments',
+          from: 'employmentdocuments',
           localField: '_id',
           foreignField: 'groupId',
-          as: 'users'
+          as: 'employees'
         }
       },
       {
@@ -269,15 +269,15 @@ export class GroupsService {
       },
       {
         $lookup: {
-          from: 'userdocuments',
+          from: 'employmentdocuments',
           localField: 'userId',
           foreignField: '_id',
-          as: 'userDetails'
+          as: 'employees'
         }
       },
       {
         $unwind: {
-          path: '$userDetails',
+          path: '$employees',
           preserveNullAndEmptyArrays: true
         }
       },
@@ -290,10 +290,10 @@ export class GroupsService {
           updatedAt: 1,
           userId: 1,
           userDetails: {
-            fullName: '$userDetails.fullName',
-            email: '$userDetails.email'
+            fullName: '$employees.fullName',
+            email: '$employees.email'
           },
-          users: 1,
+          employees: 1,
           totalUsers: 1,
           totalCourses: 1,
           coursesWithDetails: 1

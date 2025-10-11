@@ -12,6 +12,11 @@ export class CreateCourseDto {
   @IsString()
   description?: string;
 
+  @ApiProperty({ description: 'User ID', required: false })
+  @IsOptional()
+  @IsString()
+  userId?: string;
+
   @ApiProperty({ description: 'Thumbnail image file or URL', required: false, type: 'string', format: 'binary' })
   @IsOptional()
   @IsString()
