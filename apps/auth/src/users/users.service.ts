@@ -471,24 +471,12 @@ export class UsersService {
       {
         fullName: 'John Doe',
         email: 'john.doe@example.com',
-        password: 'password123',
-        userType: 'user',
-        companyName: 'Example Corp',
-        country: 'USA',
-        isTermsAccepted: 'true',
-        groupId: '657e902c4b628d1f0fc8f09e',
-        departmentId: '657e902c4b628d1f0fc8f09f',
+        role: 'user',
       },
       {
         fullName: 'Jane Smith',
         email: 'jane.smith@example.com',
-        password: 'password456',
-        userType: 'admin',
-        companyName: 'Sample Inc',
-        country: 'Canada',
-        isTermsAccepted: 'true',
-        groupId: '',
-        departmentId: '',
+        role: 'user',
       },
     ];
     const worksheet = XLSX.utils.json_to_sheet(template);

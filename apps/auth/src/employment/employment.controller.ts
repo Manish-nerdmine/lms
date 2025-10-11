@@ -1,9 +1,10 @@
-import { Controller, Post, Body, Get, Param, UseGuards, Request, Query, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, UseGuards, Request, Query, UseInterceptors, UploadedFile, Put, Patch } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { EmploymentService } from './employment.service';
 import { CreateEmploymentDto } from './dto/create-employment.dto';
 import { LoginEmploymentDto } from './dto/login-employment.dto';
+import { UpdateEmploymentDto } from './dto/update-employment.dto';
 
 @ApiTags('Employment')
 @Controller('employment')
@@ -30,6 +31,8 @@ export class EmploymentController {
   @Post('upload-excel')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
+  @ApiQuery({ name: 'userId', required: true, description: 'User ID to assign all employments to' })
+  @ApiQuery({ name: 'groupId', required: false, description: 'Group ID to assign all employments to (optional)' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -44,12 +47,16 @@ export class EmploymentController {
   })
   @ApiOperation({ 
     summary: 'Upload employments from Excel file',
-    description: 'Upload employments from Excel file. Required columns: fullName, email, userId. Optional columns: role, password, groupId.'
+    description: 'Upload employments from Excel file. Required columns: fullName, email, role. userId and groupId are passed as query parameters.'
   })
   @ApiResponse({ status: 201, description: 'Employments uploaded successfully' })
   @ApiResponse({ status: 400, description: 'Invalid file format or data' })
-  async uploadEmploymentsFromExcel(@UploadedFile() file: Express.Multer.File) {
-    return this.employmentService.uploadEmploymentsFromExcel(file);
+  async uploadEmploymentsFromExcel(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('userId') userId: string,
+    @Query('groupId') groupId?: string,
+  ) {
+    return this.employmentService.uploadEmploymentsFromExcel(file, userId, groupId);
   }
 
   @Get()
@@ -91,6 +98,18 @@ export class EmploymentController {
   @ApiResponse({ status: 404, description: 'Employment record not found' })
   async getEmploymentById(@Param('id') id: string) {
     return await this.employmentService.getEmploymentById(id);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Update employment record' })
+  @ApiResponse({ status: 200, description: 'Employment record updated successfully' })
+  @ApiResponse({ status: 404, description: 'Employment record not found' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  async updateEmployment(
+    @Param('id') id: string,
+    @Body() updateEmploymentDto: UpdateEmploymentDto,
+  ) {
+    return await this.employmentService.updateEmployment(id, updateEmploymentDto);
   }
 }
 

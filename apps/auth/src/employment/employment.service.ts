@@ -2,6 +2,7 @@ import { Injectable, UnprocessableEntityException, BadRequestException, NotFound
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateEmploymentDto } from './dto/create-employment.dto';
+import { UpdateEmploymentDto } from './dto/update-employment.dto';
 import { LoginEmploymentDto } from './dto/login-employment.dto';
 import { EmploymentRepository } from './employment.repository';
 import { PasscodeService } from '../passcode/passcode.service';
@@ -278,10 +279,28 @@ export class EmploymentService {
     }
   }
 
-  async uploadEmploymentsFromExcel(file: Express.Multer.File) {
+  async uploadEmploymentsFromExcel(file: Express.Multer.File, userId: string, groupId?: string) {
     try {
       if (!file) {
         throw new BadRequestException('No file uploaded');
+      }
+
+      if (!userId) {
+        throw new BadRequestException('userId is required');
+      }
+
+      // Validate user exists
+      const user = await this.userModel.findById(userId).exec();
+      if (!user) {
+        throw new BadRequestException(`User not found with ID: ${userId}`);
+      }
+
+      // Validate group exists if provided
+      if (groupId) {
+        const group = await this.groupModel.findById(groupId).exec();
+        if (!group) {
+          throw new BadRequestException(`Group not found with ID: ${groupId}`);
+        }
       }
 
       const workbook = XLSX.read(file.buffer, { type: 'buffer' });
@@ -301,20 +320,10 @@ export class EmploymentService {
       for (const row of data) {
         try {
           // Validate required fields
-          if (!row['fullName'] || !row['email'] || !row['userId']) {
+          if (!row['fullName'] || !row['email'] || !row['role']) {
             results.failed.push({
               row,
-              reason: 'Missing required fields: fullName, email, or userId',
-            });
-            continue;
-          }
-
-          // Find user by userId
-          const user = await this.userModel.findById(row['userId']).exec();
-          if (!user) {
-            results.failed.push({
-              row,
-              reason: `User not found with ID: ${row['userId']}`,
+              reason: 'Missing required fields: fullName, email, or role',
             });
             continue;
           }
@@ -325,12 +334,13 @@ export class EmploymentService {
           const employmentData: any = {
             fullName: row['fullName'],
             email: row['email'],
-            role: row['role'] || 'user',
-            isActive: row['isActive'] !== undefined ? row['isActive'] : true,
-            groupId: row['groupId'] || user.groupId,
+            role: row['role'],
+            isActive: false,
+            groupId: groupId,
+            userId: new Types.ObjectId(userId)
           };
 
-          // Hash password if provided
+          // Hash password if provided in Excel
           if (row['password']) {
             employmentData.password = await hashPassword(row['password']);
           }
@@ -339,7 +349,7 @@ export class EmploymentService {
             // Update existing employment
             await this.employmentRepository.update(
               existingEmployment._id.toString(),
-              { ...employmentData, userId: user._id }
+              { ...employmentData, userId: new Types.ObjectId(userId) }
             );
             results.success.push({
               email: row['email'],
@@ -347,7 +357,7 @@ export class EmploymentService {
             });
           } else {
             // Create new employment
-            await this.employmentRepository.createEmployment(employmentData, user._id);
+            await this.employmentRepository.createEmployment(employmentData, new Types.ObjectId(userId));
             results.success.push({
               email: row['email'],
               action: 'created',
@@ -452,7 +462,7 @@ export class EmploymentService {
    * @param updateData - Data to update
    * @returns Updated employment record
    */
-  async updateEmployment(id: string, updateData: any) {
+  async updateEmployment(id: string, updateEmploymentDto: UpdateEmploymentDto) {
     try {
       // Check if employment exists
       const existingEmployment = await this.employmentRepository.findById(id);
@@ -460,39 +470,34 @@ export class EmploymentService {
         throw new NotFoundException('Employment record not found');
       }
 
-      // If groupId is being updated, validate it exists and check for course assignments
-      if (updateData.groupId) {
-        const group = await this.groupModel.findById(updateData.groupId).exec();
+      // If email is being updated, check if it's already in use
+      if (updateEmploymentDto.email && updateEmploymentDto.email !== existingEmployment.email) {
+        const emailExists = await this.employmentRepository.findOneByEmail(updateEmploymentDto.email);
+        if (emailExists) {
+          throw new ConflictException('Email is already in use by another employment record');
+        }
+      }
+
+      // If groupId is being updated, validate it exists
+      if (updateEmploymentDto.groupId) {
+        const group = await this.groupModel.findById(updateEmploymentDto.groupId).exec();
         if (!group) {
           throw new NotFoundException('Group not found');
         }
-        
-        // Check if the group has courses assigned
-        if (group.courses && group.courses.length > 0) {
-          throw new ForbiddenException(
-            'Cannot assign employee to group with assigned courses. Please remove course assignments first.'
-          );
-        }
       }
 
-      // If employment is being moved from a group with courses, prevent the update
-      if (existingEmployment.groupId && updateData.groupId !== existingEmployment.groupId) {
-        const currentGroup = await this.groupModel.findById(existingEmployment.groupId).exec();
-        if (currentGroup && currentGroup.courses && currentGroup.courses.length > 0) {
-          throw new ForbiddenException(
-            'Cannot move employee from group with assigned courses. Please remove course assignments first.'
-          );
-        }
-      }
-
-      const updatedEmployment = await this.employmentRepository.update(id, updateData);
+      const updatedEmployment = await this.employmentRepository.update(id, updateEmploymentDto);
       
+      if (!updatedEmployment) {
+        throw new NotFoundException('Failed to update employment record');
+      }
+
       return {
         message: 'Employment updated successfully',
         employment: updatedEmployment
       };
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+      if (error instanceof NotFoundException || error instanceof ConflictException) {
         throw error;
       }
       throw new UnprocessableEntityException(error.message);
