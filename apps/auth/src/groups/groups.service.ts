@@ -238,47 +238,39 @@ export class GroupsService {
       },
       {
         $addFields: {
-          totalUsers: { $size: '$users' },
-          totalCourses: { $size: '$courses' },
+          totalUsers: { $size: { $ifNull: ['$employees', []] } },
+          totalCourses: { $size: { $ifNull: ['$courses', []] } },
           coursesWithDetails: {
-            $map: {
-              input: '$courses',
-              as: 'course',
-              in: {
-                $mergeObjects: [
-                  '$$course',
-                  {
-                    courseDetails: {
-                      $arrayElemAt: [
-                        {
-                          $filter: {
-                            input: '$courseDetails',
-                            as: 'detail',
-                            cond: { $eq: ['$$detail._id', '$$course.courseId'] }
-                          }
-                        },
-                        0
-                      ]
-                    }
+            $cond: {
+              if: { $isArray: '$courses' },
+              then: {
+                $map: {
+                  input: '$courses',
+                  as: 'course',
+                  in: {
+                    $mergeObjects: [
+                      '$$course',
+                      {
+                        courseDetails: {
+                          $arrayElemAt: [
+                            {
+                              $filter: {
+                                input: '$courseDetails',
+                                as: 'detail',
+                                cond: { $eq: ['$$detail._id', '$$course.courseId'] }
+                              }
+                            },
+                            0
+                          ]
+                        }
+                      }
+                    ]
                   }
-                ]
-              }
+                }
+              },
+              else: []
             }
           }
-        }
-      },
-      {
-        $lookup: {
-          from: 'employmentdocuments',
-          localField: 'userId',
-          foreignField: '_id',
-          as: 'employees'
-        }
-      },
-      {
-        $unwind: {
-          path: '$employees',
-          preserveNullAndEmptyArrays: true
         }
       },
       {
@@ -289,10 +281,6 @@ export class GroupsService {
           createdAt: 1,
           updatedAt: 1,
           userId: 1,
-          userDetails: {
-            fullName: '$employees.fullName',
-            email: '$employees.email'
-          },
           employees: 1,
           totalUsers: 1,
           totalCourses: 1,
