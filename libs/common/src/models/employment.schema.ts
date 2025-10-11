@@ -22,7 +22,7 @@ export class EmploymentDocument extends AbstractDocument {
   @Prop({ type: SchemaTypes.ObjectId, ref: 'Group', required: false })
   groupId?: Types.ObjectId;
 
-  @Prop({ type: SchemaTypes.ObjectId, ref: 'User', required: true })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'UserDocument', required: true })
   userId: Types.ObjectId;
 
   @Prop({ type: Boolean, default: false })

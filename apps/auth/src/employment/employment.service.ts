@@ -28,10 +28,12 @@ export class EmploymentService {
       // Find user by userId or email
       let user;
 
+
       // Check if employment record already exists (created by admin when user was added)
       const existingEmployment = await this.employmentRepository.findOneByEmail(createEmploymentDto.email);
       
       if (existingEmployment) {
+        console.log('existingEmployment', existingEmployment);
         // Employment record exists, update it with signup details
         // Set isActive to true and add password
         const hashedPassword = createEmploymentDto.password 
@@ -43,8 +45,6 @@ export class EmploymentService {
           {
             password: hashedPassword,
             isActive: true, // Activate the account when user signs up
-            role: createEmploymentDto.role || existingEmployment.role,
-            fullName: createEmploymentDto.fullName || existingEmployment.fullName,
           }
         );
 
@@ -54,10 +54,6 @@ export class EmploymentService {
         };
       }
 
-      // Hash password if provided
-      if (createEmploymentDto.password) {
-        createEmploymentDto.password = await hashPassword(createEmploymentDto.password);
-      }
 
       // Set isActive to true for new employment records
       const employmentData = {
@@ -66,12 +62,9 @@ export class EmploymentService {
         isActive: false,
       };
 
-      return await this.employmentRepository.createEmployment(employmentData, user._id);
+      return await this.employmentRepository.createEmployment(employmentData, createEmploymentDto.userId);
     } catch (err) {
-      if (err instanceof NotFoundException || err instanceof BadRequestException || err instanceof ForbiddenException) {
-        throw err;
-      }
-      throw new UnprocessableEntityException(err.message);
+      console.log('err', err);
     }
   }
 
