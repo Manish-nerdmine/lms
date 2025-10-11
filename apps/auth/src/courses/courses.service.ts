@@ -10,6 +10,7 @@ import { VideosService } from '../videos/videos.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { Types } from 'mongoose';
 import { ServerUtils } from '../utils/server.utils';
 
 @Injectable()
@@ -52,7 +53,7 @@ export class CoursesService {
     }
 
     // Create the course first to get the ID
-    const course = new this.courseModel(createCourseDto);
+    const course = new this.courseModel({ ...createCourseDto, userId: new Types.ObjectId(createCourseDto.userId) });
     const savedCourse = await course.save();
 
     // Now generate the thumbnail URL with the course ID

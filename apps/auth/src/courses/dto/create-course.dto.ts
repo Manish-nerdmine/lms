@@ -1,5 +1,6 @@
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Types } from 'mongoose';
 
 export class CreateCourseDto {
   @ApiProperty({ description: 'Title of the course' })
@@ -12,10 +13,10 @@ export class CreateCourseDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ description: 'User ID', required: false })
+  @ApiProperty({ description: 'User ID', required: true })
   @IsOptional()
   @IsString()
-  userId?: string;
+  userId?: Types.ObjectId;
 
   @ApiProperty({ description: 'Thumbnail image file or URL', required: false, type: 'string', format: 'binary' })
   @IsOptional()

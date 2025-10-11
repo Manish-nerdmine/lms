@@ -45,6 +45,10 @@ export class CoursesController {
           type: 'string',
           description: 'Description of the course',
         },
+        userId: {
+          type: 'string',
+          description: 'User ID',
+        },
         thumbnail: {
           type: 'string',
           format: 'binary',
