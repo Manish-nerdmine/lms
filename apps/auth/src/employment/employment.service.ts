@@ -26,11 +26,6 @@ export class EmploymentService {
   async create(createEmploymentDto: CreateEmploymentDto) {
     try {
       // Check if user with this email exists (this is allowed for employment)
-      const existingUser = await this.userModel.findOne({ email: createEmploymentDto.email }).exec();
-      if (!existingUser) {
-        throw new BadRequestException('Email must exist in user schema to create employment record');
-      }
-
       // Check if employment record already exists (created by admin when user was added)
       const existingEmployment = await this.employmentRepository.findOneByEmail(createEmploymentDto.email);
       
@@ -51,36 +46,18 @@ export class EmploymentService {
           }
         );
 
+        
+
         return {
           message: 'Employment account activated successfully',
           employment: updatedEmployment
         };
       }
-
-
-
-      // Validate group exists if provided and check for course assignments
-      if (existingUser.groupId) {
-        const group = await this.groupModel.findById(existingUser.groupId).exec();
-        if (!group) {
-          throw new NotFoundException('Group not found');
-        }
-        
-        // Check if the group has courses assigned
-        if (group.courses && group.courses.length > 0) {
-          throw new ForbiddenException(
-            'Cannot assign employee to group with assigned courses. Please remove course assignments first.'
-          );
-        }
-      }
-
       // Hash password if provided
       if (createEmploymentDto.password) {
         createEmploymentDto.password = await hashPassword(createEmploymentDto.password);
       }
 
-      // Set isActive to true for new signups
-      createEmploymentDto['isActive'] = true;
 
       return await this.employmentRepository.createEmployment(createEmploymentDto, createEmploymentDto.userId);
     } catch (err) {
