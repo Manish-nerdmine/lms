@@ -27,12 +27,6 @@ export class EmploymentService {
     try {
       // Find user by userId or email
       let user;
-      if (createEmploymentDto.userId) {
-        user = await this.userModel.findById(createEmploymentDto.userId).exec();
-      }
-      if (!user) {
-        throw new BadRequestException('User not found. Please ensure user exists before creating employment record.');
-      }
 
       // Check if employment record already exists (created by admin when user was added)
       const existingEmployment = await this.employmentRepository.findOneByEmail(createEmploymentDto.email);
