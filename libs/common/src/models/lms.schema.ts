@@ -12,7 +12,7 @@ export class Course extends Document {
   @Prop()
   thumbnail: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'UserDocument' })
   userId: string;
 
   @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Video' }] })
