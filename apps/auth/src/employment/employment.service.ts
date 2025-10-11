@@ -10,6 +10,7 @@ import { Group } from '@app/common/models/group.schema';
 import { Department } from '@app/common/models/department.schema';
 import { UserDocument } from '@app/common/models/user.schema';
 import { Video, Quiz } from '@app/common/models/lms.schema';
+import * as XLSX from 'xlsx';
 
 @Injectable()
 export class EmploymentService {
@@ -164,14 +165,213 @@ export class EmploymentService {
     }
   }
 
-  async getAllEmployments(userId?: string) {
+  async getAllEmployments(userId?: string, groupId?: string, page: number = 1, limit: number = 10, search?: string) {
     try {
-  console.log('userId', userId);
+      const skip = (page - 1) * limit;
+      const matchQuery: any = {};
+
+      // Filter by userId if provided
       if (userId) {
-        return await this.employmentRepository.find({ userId: new Types.ObjectId(userId) });
+        matchQuery.userId = new Types.ObjectId(userId);
       }
+
+      // Filter by groupId if provided
+      if (groupId) {
+        matchQuery.groupId = new Types.ObjectId(groupId);
+      }
+
+      // Build aggregation pipeline
+      const pipeline: any[] = [
+        { $match: matchQuery },
+        {
+          $lookup: {
+            from: 'userdocuments',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'userDetails'
+          }
+        },
+        {
+          $unwind: {
+            path: '$userDetails',
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        {
+          $lookup: {
+            from: 'groups',
+            localField: 'groupId',
+            foreignField: '_id',
+            as: 'groupDetails'
+          }
+        },
+        {
+          $unwind: {
+            path: '$groupDetails',
+            preserveNullAndEmptyArrays: true
+          }
+        }
+      ];
+
+      // Add search filter if provided
+      if (search) {
+        pipeline.push({
+          $match: {
+            $or: [
+              { fullName: { $regex: search, $options: 'i' } },
+              { email: { $regex: search, $options: 'i' } },
+              { 'userDetails.fullName': { $regex: search, $options: 'i' } },
+              { 'userDetails.email': { $regex: search, $options: 'i' } }
+            ]
+          }
+        });
+      }
+
+      // Add projection
+      pipeline.push({
+        $project: {
+          fullName: 1,
+          email: 1,
+          role: 1,
+          isActive: 1,
+          groupId: 1,
+          userId: 1,
+          lastLoggedIn: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          user: {
+            fullName: '$userDetails.fullName',
+            email: '$userDetails.email',
+            companyName: '$userDetails.companyName',
+            phone: '$userDetails.phone'
+          },
+          groupName: '$groupDetails.name'
+        }
+      });
+
+      // Get total count before pagination
+      const countPipeline = [...pipeline, { $count: 'total' }];
+      
+      // Add pagination
+      pipeline.push({ $skip: skip });
+      pipeline.push({ $limit: limit });
+
+      // Execute queries
+      const [employments, countResult] = await Promise.all([
+        this.employmentRepository.aggregate(pipeline),
+        this.employmentRepository.aggregate(countPipeline)
+      ]);
+
+      const total = countResult.length > 0 ? countResult[0].total : 0;
+
+      return {
+        employments,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      };
     } catch (error) {
       throw new UnprocessableEntityException(error.message);
+    }
+  }
+
+  async uploadEmploymentsFromExcel(file: Express.Multer.File) {
+    try {
+      if (!file) {
+        throw new BadRequestException('No file uploaded');
+      }
+
+      const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+
+      if (!data || data.length === 0) {
+        throw new BadRequestException('Excel file is empty');
+      }
+
+      const results = {
+        success: [],
+        failed: [],
+      };
+
+      for (const row of data) {
+        try {
+          // Validate required fields
+          if (!row['fullName'] || !row['email'] || !row['userId']) {
+            results.failed.push({
+              row,
+              reason: 'Missing required fields: fullName, email, or userId',
+            });
+            continue;
+          }
+
+          // Find user by userId
+          const user = await this.userModel.findById(row['userId']).exec();
+          if (!user) {
+            results.failed.push({
+              row,
+              reason: `User not found with ID: ${row['userId']}`,
+            });
+            continue;
+          }
+
+          // Check if employment already exists
+          const existingEmployment = await this.employmentRepository.findOneByEmail(row['email']);
+
+          const employmentData: any = {
+            fullName: row['fullName'],
+            email: row['email'],
+            role: row['role'] || 'user',
+            isActive: row['isActive'] !== undefined ? row['isActive'] : true,
+            groupId: row['groupId'] || user.groupId,
+          };
+
+          // Hash password if provided
+          if (row['password']) {
+            employmentData.password = await hashPassword(row['password']);
+          }
+
+          if (existingEmployment) {
+            // Update existing employment
+            await this.employmentRepository.update(
+              existingEmployment._id.toString(),
+              { ...employmentData, userId: user._id }
+            );
+            results.success.push({
+              email: row['email'],
+              action: 'updated',
+            });
+          } else {
+            // Create new employment
+            await this.employmentRepository.createEmployment(employmentData, user._id);
+            results.success.push({
+              email: row['email'],
+              action: 'created',
+            });
+          }
+        } catch (error) {
+          results.failed.push({
+            row,
+            reason: error.message,
+          });
+        }
+      }
+
+      return {
+        message: 'Excel upload completed',
+        summary: {
+          total: data.length,
+          successful: results.success.length,
+          failed: results.failed.length,
+        },
+        results,
+      };
+    } catch (error) {
+      throw new BadRequestException(`Failed to process Excel file: ${error.message}`);
     }
   }
 

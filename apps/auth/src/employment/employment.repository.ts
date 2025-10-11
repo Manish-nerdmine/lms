@@ -54,4 +54,8 @@ export class EmploymentRepository {
   async find(query: any): Promise<EmploymentDocument[]> {
     return this.employmentModel.find(query).populate('userId', 'fullName email').exec();
   }
+
+  async aggregate(pipeline: any[]): Promise<any[]> {
+    return this.employmentModel.aggregate(pipeline).exec();
+  }
 }

@@ -1,5 +1,6 @@
-import { Controller, Post, Body, Get, Param, UseGuards, Request, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { Controller, Post, Body, Get, Param, UseGuards, Request, Query, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { EmploymentService } from './employment.service';
 import { CreateEmploymentDto } from './dto/create-employment.dto';
 import { LoginEmploymentDto } from './dto/login-employment.dto';
@@ -26,13 +27,47 @@ export class EmploymentController {
     return await this.employmentService.login(loginEmploymentDto);
   }
 
+  @Post('upload-excel')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Excel file with employment data',
+        },
+      },
+    },
+  })
+  @ApiOperation({ 
+    summary: 'Upload employments from Excel file',
+    description: 'Upload employments from Excel file. Required columns: fullName, email, userId. Optional columns: role, password, groupId.'
+  })
+  @ApiResponse({ status: 201, description: 'Employments uploaded successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid file format or data' })
+  async uploadEmploymentsFromExcel(@UploadedFile() file: Express.Multer.File) {
+    return this.employmentService.uploadEmploymentsFromExcel(file);
+  }
+
   @Get()
-  @ApiOperation({ summary: 'Get all employments' })
+  @ApiOperation({ summary: 'Get all employments with pagination and search' })
   @ApiQuery({ name: 'userId', required: false, description: 'Filter employments by userId' })
-  @ApiResponse({ status: 200, description: 'List of all employments' })
-  async getAllEmployments(@Query('userId') userId?: string) {
-    console.log('getAllEmployments', userId);
-    return await this.employmentService.getAllEmployments(userId);
+  @ApiQuery({ name: 'groupId', required: false, description: 'Filter employments by groupId' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page (default: 10)' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search by name or email' })
+  @ApiResponse({ status: 200, description: 'List of all employments with pagination' })
+  async getAllEmployments(
+    @Query('userId') userId?: string,
+    @Query('groupId') groupId?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
+  ) {
+    return await this.employmentService.getAllEmployments(userId, groupId, page, limit, search);
   }
 
   @Get('user-info/:email')

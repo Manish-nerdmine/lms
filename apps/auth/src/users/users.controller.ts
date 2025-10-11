@@ -129,32 +129,6 @@ export class UsersController {
     return this.usersService.deleteUser(id);
   }
 
-  @Post('upload-excel')
-
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
-          description: 'Excel file with user data',
-        },
-      },
-    },
-  })
-  @ApiOperation({ 
-    summary: 'Upload users from Excel file',
-    description: 'Upload users from Excel file. Required columns: fullName, email, password. Optional columns: userType, companyName, country, isTermsAccepted, groupId, departmentId. groupId and departmentId must be valid MongoDB ObjectIds of existing groups and departments.'
-  })
-  @ApiResponse({ status: 201, description: 'Users uploaded successfully' })
-  @ApiResponse({ status: 400, description: 'Invalid file format or data' })
-  async uploadUsersFromExcel(@UploadedFile() file: Express.Multer.File) {
-    return this.usersService.uploadUsersFromExcel(file);
-  }
-
 
 
   @Get('available-groups')
