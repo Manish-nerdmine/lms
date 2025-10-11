@@ -40,25 +40,6 @@ export class UsersService {
       // Create the user
       const createdUser = await this.usersRepository.createUser(createUserDto);
 
-      // Automatically create employment record with isActive: false
-      // User will activate this when they sign up through employee portal
-      try {
-        await this.employmentRepository.createEmployment({
-          fullName: createUserDto.fullName,
-          email: createUserDto.email || '',
-          role: createUserDto.userType || 'user',
-          isActive: false, // Will be set to true when user signs up in employee portal
-          groupId: createUserDto.groupId
-         
-          // Note: password is not set here - will be set when user signs up
-        }, createUserDto.userId);
-        
-        console.log(`Employment record created for user: ${createUserDto.email} (inactive - awaiting signup)`);
-      } catch (employmentError) {
-        // Log error but don't fail user creation
-        console.error('Failed to create employment record:', employmentError);
-      }
-
       return createdUser;
     } catch (err) {
       if (err instanceof NotFoundException) {

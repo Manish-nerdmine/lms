@@ -31,6 +31,7 @@ export class EmploymentController {
   @ApiQuery({ name: 'userId', required: false, description: 'Filter employments by userId' })
   @ApiResponse({ status: 200, description: 'List of all employments' })
   async getAllEmployments(@Query('userId') userId?: string) {
+    console.log('getAllEmployments', userId);
     return await this.employmentService.getAllEmployments(userId);
   }
 

@@ -23,13 +23,15 @@ export class CreateEmploymentDto {
   @IsString()
   role?: string;
 
-  @ApiProperty({ example: '657e902c4b628d1f0fc8f09', description: 'User ID', required: true })
-  @IsNotEmpty()
-  userId: Types.ObjectId;
+  @ApiProperty({ example: '657e902c4b628d1f0fc8f09', description: 'User ID', required: false })
+  @IsOptional()
+  @IsMongoId()
+  userId?: Types.ObjectId;
 
-  @ApiProperty({ example: true, description: 'Employee has accepted terms and conditions' })
+  @ApiProperty({ example: true, description: 'Employee has accepted terms and conditions', required: false })
   @IsBoolean()
-  isTermsAccepted: boolean;
+  @IsOptional()
+  isTermsAccepted?: boolean;
 
   @ApiProperty({ example: '657e902c4b628d1f0fc8f09', description: 'Group ID (optional)', required: false })
   @IsOptional()

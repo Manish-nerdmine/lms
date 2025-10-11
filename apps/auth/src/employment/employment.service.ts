@@ -1,6 +1,6 @@
 import { Injectable, UnprocessableEntityException, BadRequestException, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { CreateEmploymentDto } from './dto/create-employment.dto';
 import { LoginEmploymentDto } from './dto/login-employment.dto';
 import { EmploymentRepository } from './employment.repository';
@@ -25,12 +25,20 @@ export class EmploymentService {
 
   async create(createEmploymentDto: CreateEmploymentDto) {
     try {
-      // Check if user with this email exists (this is allowed for employment)
+      // Find user by userId or email
+      let user;
+      if (createEmploymentDto.userId) {
+        user = await this.userModel.findById(createEmploymentDto.userId).exec();
+      }
+      if (!user) {
+        throw new BadRequestException('User not found. Please ensure user exists before creating employment record.');
+      }
+
       // Check if employment record already exists (created by admin when user was added)
       const existingEmployment = await this.employmentRepository.findOneByEmail(createEmploymentDto.email);
       
       if (existingEmployment) {
-        // Employment record exists (created by admin), update it with signup details
+        // Employment record exists, update it with signup details
         // Set isActive to true and add password
         const hashedPassword = createEmploymentDto.password 
           ? await hashPassword(createEmploymentDto.password) 
@@ -46,20 +54,25 @@ export class EmploymentService {
           }
         );
 
-        
-
         return {
           message: 'Employment account activated successfully',
           employment: updatedEmployment
         };
       }
+
       // Hash password if provided
       if (createEmploymentDto.password) {
         createEmploymentDto.password = await hashPassword(createEmploymentDto.password);
       }
 
+      // Set isActive to true for new employment records
+      const employmentData = {
+        ...createEmploymentDto,
+        userId: createEmploymentDto.userId,
+        isActive: false,
+      };
 
-      return await this.employmentRepository.createEmployment(createEmploymentDto, createEmploymentDto.userId);
+      return await this.employmentRepository.createEmployment(employmentData, user._id);
     } catch (err) {
       if (err instanceof NotFoundException || err instanceof BadRequestException || err instanceof ForbiddenException) {
         throw err;
@@ -80,6 +93,9 @@ export class EmploymentService {
       return;
     }
   }
+
+
+  
 
 
   async AddEmployment(createEmploymentDto: CreateEmploymentDto) {
@@ -163,10 +179,10 @@ export class EmploymentService {
 
   async getAllEmployments(userId?: string) {
     try {
+  console.log('userId', userId);
       if (userId) {
-        return await this.employmentRepository.find({ userId });
+        return await this.employmentRepository.find({ userId: new Types.ObjectId(userId) });
       }
-      return await this.employmentRepository.findAll();
     } catch (error) {
       throw new UnprocessableEntityException(error.message);
     }
