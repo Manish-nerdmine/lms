@@ -410,9 +410,9 @@ export class GroupsService {
     }
 
     // Check if course is already assigned to the group
-    if (group.courses && group.courses.some(c => c.courseId.toString() === assignCourseDto.courseId)) {
-      throw new ConflictException('Course is already assigned to this group');
-    }
+    // if (group.courses && group.courses.some(c => c.courseId.toString() === assignCourseDto.courseId)) {
+    //   throw new ConflictException('Course is already assigned to this group');
+    // }
 
     // Prepare course assignment with due date
     const courseAssignment = {
@@ -429,18 +429,22 @@ export class GroupsService {
 
     // Send email notifications if requested
     if (assignCourseDto.sendEmailNotifications) {
+      console.log('Sending email notifications');
       try {
         // Get all users in the group
-        const users = await this.userModel.find({ groupId }).exec();
         
         // Get all employees in the group
-        const employees = await this.employmentModel.find({ groupId }).exec();
+        const employees = await this.employmentModel.find({ groupId: new Types.ObjectId(groupId) }).exec();
+        console.log('Employees:', employees);
         
         // Get existing employees (those who already have accounts)
         const employeeEmails = employees.map(emp => emp.email).filter(email => email);
+        console.log('Employee emails:', employeeEmails);
         const existingEmployees = await this.employmentModel.find({ 
-          email: { $in: employeeEmails, isActive: true } 
+          email: { $in: employeeEmails },
+          isActive: true
         }).exec();
+        console.log('Existing employees:', existingEmployees);
         const existingEmployeeEmails = new Set(existingEmployees.map(emp => emp.email));
         
         // Prepare recipients with different link types
@@ -461,6 +465,7 @@ export class GroupsService {
         
         // Add employees with appropriate link type
         if (employees.length > 0) {
+          console.log('Employees:', employees);
           const employeesWithEmail = employees.filter(emp => emp.email);
           allRecipients.push(...employeesWithEmail.map(emp => {
             const isExistingEmployee = existingEmployeeEmails.has(emp.email);
@@ -490,6 +495,7 @@ export class GroupsService {
         }
         
         if (allRecipients.length > 0) {
+          console.log('All recipients:', allRecipients);
           await this.emailService.sendBulkCourseAssignmentEmails(
             allRecipients.map(recipient => ({
               email: recipient.email,

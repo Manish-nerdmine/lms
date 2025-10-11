@@ -115,15 +115,10 @@ export class EmploymentService {
       throw new UnprocessableEntityException('Invalid Password.');
     }
 
-    // Find user by email
-    const user = await this.userModel.findOne({ email: loginEmploymentDto.email }).exec();
-    if (!user) {
-      throw new UnprocessableEntityException('User not found in User schema.');
-    }
 
     // Find group (if exists)
-    const group = user.groupId
-      ? await this.groupModel.findOne({ _id: user.groupId }).exec()
+    const group = employment.groupId
+      ? await this.groupModel.findOne({ _id: employment.groupId }).exec()
       : null;
 
     // Create passcode
