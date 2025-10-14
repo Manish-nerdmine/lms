@@ -162,7 +162,7 @@ export class EmailService {
               <tr>
                 <td align="center" style="border-radius: 25px; background-color: #4CAF50; background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);">
                   <a href="${link}" target="_blank" style="border: none; border-radius: 25px; padding: 15px 40px; font-size: 16px; font-weight: bold; color: #ffffff !important; text-decoration: none; display: inline-block; mso-padding-alt: 0; background-color: #4CAF50;">
-                    <span style="color:rgba(255, 255, 255, 0.21) !important; text-decoration: none; font-weight: bold;">
+                    <span style="color:rgba(255, 255, 255, 0.34) !important; text-decoration: none; font-weight: bold;">
                       ${link.includes('signup') ? '🚀 Sign Up & Start Learning' : '📚 Go to My Courses'}
                     </span>
                   </a>

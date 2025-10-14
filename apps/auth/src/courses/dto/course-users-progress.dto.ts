@@ -15,22 +15,25 @@ export class UserProgressDto {
 }
 
 export class UserWithProgressDto {
+  @ApiProperty({ description: 'Employment ID' })
+  employmentId: string;
+
   @ApiProperty({ description: 'User ID' })
   userId: string;
 
-  @ApiProperty({ description: 'User full name' })
+  @ApiProperty({ description: 'Employee full name' })
   fullName: string;
 
-  @ApiProperty({ description: 'User email address' })
+  @ApiProperty({ description: 'Employee email address' })
   email: string;
 
-  @ApiProperty({ description: 'Company name' })
-  companyName: string;
+  @ApiProperty({ description: 'Employee role' })
+  role: string;
 
-  @ApiProperty({ description: 'User type' })
-  userType: string;
+  @ApiProperty({ description: 'Is employee account active' })
+  isActive: boolean;
 
-  @ApiProperty({ description: 'User progress details', type: UserProgressDto })
+  @ApiProperty({ description: 'Employee progress details', type: UserProgressDto })
   progress: UserProgressDto;
 
   @ApiProperty({ description: 'Last updated timestamp' })
@@ -47,9 +50,9 @@ export class CourseUsersProgressResponseDto {
   @ApiProperty({ description: 'Number of videos available in the course' })
   videoCount: number;
 
-  @ApiProperty({ description: 'Total number of users enrolled in the course' })
+  @ApiProperty({ description: 'Total number of employees enrolled in the course' })
   totalUsers: number;
 
-  @ApiProperty({ description: 'Array of users with their progress', type: [UserWithProgressDto] })
+  @ApiProperty({ description: 'Array of employees with their progress', type: [UserWithProgressDto] })
   users: UserWithProgressDto[];
 }

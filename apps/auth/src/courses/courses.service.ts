@@ -213,24 +213,22 @@ export class CoursesService {
       'courses.courseId': courseId
     }).exec();
 
-    const groupIds = groupsWithCourse.map(group => group._id.toString());
+    const groupIds = groupsWithCourse.map(group => group._id);
 
-    // Find users who belong to these groups
-    const usersInGroups = await this.userModel.find({
+    // Find employees who belong to these groups
+    const employeesInGroups = await this.employmentModel.find({
       groupId: { $in: groupIds }
     }).exec();
 
     // Get all user progress records for this course
     const userProgresses = await this.userProgressModel
       .find({ courseId })
-      .populate('userId', 'fullName email companyName userType')
       .exec();
 
     // Create a map of user progress by userId
     const progressMap = new Map();
     userProgresses.forEach(progress => {
-      const user = progress.userId as any;
-      progressMap.set(user._id.toString(), {
+      progressMap.set(progress.userId.toString(), {
         completedVideos: progress.completedVideos,
         completedQuizzes: progress.completedQuizzes,
         progressPercentage: progress.progressPercentage,
@@ -239,22 +237,23 @@ export class CoursesService {
       });
     });
 
-    // Transform the data to include user details and progress
-    const usersWithProgress = usersInGroups.map(user => {
-      const progress = progressMap.get(user._id.toString()) || {
+    // Transform the data to include employee details and progress
+    const employeesWithProgress = employeesInGroups.map(employee => {
+      const progress = progressMap.get(employee.userId.toString()) || {
         completedVideos: [],
         completedQuizzes: [],
         progressPercentage: 0,
         totalCompletedItems: 0,
-        lastUpdated: user.updatedAt,
+        lastUpdated: employee.updatedAt,
       };
 
       return {
-        userId: user._id.toString(),
-        fullName: user.fullName,
-        email: user.email,
-        companyName: user.companyName,
-        userType: user.userType,
+        employmentId: employee._id.toString(),
+        userId: employee.userId.toString(),
+        fullName: employee.fullName,
+        email: employee.email,
+        role: employee.role,
+        isActive: employee.isActive,
         progress: {
           completedVideos: progress.completedVideos,
           completedQuizzes: progress.completedQuizzes,
@@ -271,8 +270,8 @@ export class CoursesService {
       courseId,
       courseTitle: course.title,
       videoCount,
-      totalUsers: usersWithProgress.length,
-      users: usersWithProgress,
+      totalUsers: employeesWithProgress.length,
+      users: employeesWithProgress,
     };
   }
 

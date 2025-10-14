@@ -225,7 +225,7 @@ export class CoursesController {
   @ApiParam({ name: 'id', description: 'Course ID' })
   @ApiResponse({
     status: 200,
-    description: 'Returns all users associated with the course through groups and their progress',
+    description: 'Returns all employees associated with the course through groups and their progress',
     type: CourseUsersProgressResponseDto,
   })
   @ApiResponse({
