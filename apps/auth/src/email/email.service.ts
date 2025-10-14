@@ -158,9 +158,22 @@ export class EmailService {
 
         ${link ? `
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${link}" style="background-color: #4CAF50; background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color:rgb(255, 255, 255) !important; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4); border: none;">
-              <span style="color: #ffffff;">Go to My Courses</span>
-            </a>
+            <table border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+              <tr>
+                <td align="center" style="border-radius: 25px; background-color: #4CAF50; background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);">
+                  <a href="${link}" target="_blank" style="border: none; border-radius: 25px; padding: 15px 40px; font-size: 16px; font-weight: bold; color: #ffffff !important; text-decoration: none; display: inline-block; mso-padding-alt: 0; background-color: #4CAF50;">
+                    <span style="color:rgba(255, 255, 255, 0.21) !important; text-decoration: none; font-weight: bold;">
+                      ${link.includes('signup') ? '🚀 Sign Up & Start Learning' : '📚 Go to My Courses'}
+                    </span>
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </div>
+          <div style="text-align: center; margin: 10px 0;">
+            <p style="color: #666; font-size: 12px;">
+              Or copy this link: <a href="${link}" style="color: #4CAF50; word-break: break-all;">${link}</a>
+            </p>
           </div>
         ` : ''}
 

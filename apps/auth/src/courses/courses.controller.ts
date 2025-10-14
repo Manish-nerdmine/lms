@@ -18,6 +18,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
+import { UpdateCourseDto } from './dto/update-course.dto';
 import { PasscodeAuthGuard } from '@app/common/auth/passcode-auth.guard';
 import { ApiTags, ApiConsumes, ApiBody, ApiParam, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import * as fs from 'fs';
@@ -163,10 +164,52 @@ export class CoursesController {
   }
 
   @Patch(':id')
+  @ApiConsumes('multipart/form-data')
+  @ApiParam({ name: 'id', description: 'Course ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        title: {
+          type: 'string',
+          description: 'Title of the course',
+        },
+        description: {
+          type: 'string',
+          description: 'Description of the course',
+        },
+        thumbnail: {
+          type: 'string',
+          format: 'binary',
+          description: 'Course thumbnail image',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Course updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        _id: { type: 'string' },
+        title: { type: 'string' },
+        description: { type: 'string' },
+        userId: { type: 'string' },
+        thumbnail: { type: 'string' },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Course not found',
+  })
   @UseInterceptors(FileInterceptor('thumbnail'))
   update(
     @Param('id') id: string,
-    @Body() updateCourseDto: Partial<CreateCourseDto>,
+    @Body() updateCourseDto: UpdateCourseDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
     return this.coursesService.update(id, updateCourseDto, file);

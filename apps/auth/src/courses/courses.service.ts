@@ -5,6 +5,7 @@ import { Course, UserProgress } from '@app/common/models/lms.schema';
 import { UserDocument } from '@app/common/models/user.schema';
 import { Group } from '@app/common/models/group.schema';
 import { CreateCourseDto } from './dto/create-course.dto';
+import { UpdateCourseDto } from './dto/update-course.dto';
 import { CourseUsersProgressResponseDto } from './dto/course-users-progress.dto';
 import { VideosService } from '../videos/videos.service';
 import * as fs from 'fs';
@@ -132,7 +133,7 @@ export class CoursesService {
     };
   }
 
-  async update(id: string, updateCourseDto: Partial<CreateCourseDto>, file?: Express.Multer.File): Promise<Course> {
+  async update(id: string, updateCourseDto: UpdateCourseDto, file?: Express.Multer.File): Promise<Course> {
     const course = await this.findOne(id);
     let thumbnailUrl = updateCourseDto.thumbnail;
     let filename: string | undefined;
