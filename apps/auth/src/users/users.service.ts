@@ -471,12 +471,12 @@ export class UsersService {
       {
         fullName: 'John Doe',
         email: 'john.doe@example.com',
-        role: 'user',
+        role: 'Software',
       },
       {
         fullName: 'Jane Smith',
         email: 'jane.smith@example.com',
-        role: 'user',
+        role: 'Developer',
       },
     ];
     const worksheet = XLSX.utils.json_to_sheet(template);

@@ -464,8 +464,7 @@ export class CoursesService {
 
   async getUserCourseStatus(userId: string): Promise<any> {
     // Find user's group
-    const user = await this.employmentModel.findById(userId).exec();
-    console.log(user);
+    const user = await this.userModel.findById(userId).exec();
     if (!user || !user.groupId) {
       return {
         completed: [],
@@ -639,19 +638,136 @@ export class CoursesService {
       throw new NotFoundException('Employment record not found');
     }
 
-    // Get the user ID from employment
-    const userId = employment._id.toString();
+    const userId = employment.userId.toString();
 
-    // Get course status for this user
-    const courseStatus = await this.getUserCourseStatus(userId);
+    // Check if employment has a group assigned
+    if (!employment.groupId) {
+      return {
+        employmentId: employment._id.toString(),
+        userId: userId,
+        employeeName: employment.fullName,
+        employeeEmail: employment.email,
+        completed: [],
+        todo: [],
+        overdue: [],
+        summary: {
+          total: 0,
+          completed: 0,
+          pending: 0,
+          overdue: 0,
+          completionRate: 0,
+        },
+      };
+    }
 
-    // Return with employment details
+    // Get employment's group with assigned courses
+    const group = await this.groupModel.findById(employment.groupId).exec();
+    if (!group || !group.courses || group.courses.length === 0) {
+      return {
+        employmentId: employment._id.toString(),
+        userId: userId,
+        employeeName: employment.fullName,
+        employeeEmail: employment.email,
+        completed: [],
+        todo: [],
+        overdue: [],
+        summary: {
+          total: 0,
+          completed: 0,
+          pending: 0,
+          overdue: 0,
+          completionRate: 0,
+        },
+      };
+    }
+
+    // Get all user progress records for this user
+    const userProgresses = await this.userProgressModel
+      .find({ userId })
+      .populate('courseId', 'title description thumbnail')
+      .exec();
+
+    // Create a map of course progress
+    const progressMap = new Map();
+    userProgresses.forEach(progress => {
+      const course = progress.courseId as any;
+      progressMap.set(course._id.toString(), {
+        progressPercentage: progress.progressPercentage,
+        completedVideos: progress.completedVideos,
+        completedQuizzes: progress.completedQuizzes,
+        lastUpdated: (progress as any).updatedAt,
+      });
+    });
+
+    const completedCourses = [];
+    const todoCourses = [];
+    const overdueCourses = [];
+    const currentDate = new Date();
+
+    for (const courseAssignment of group.courses) {
+      const course = await this.courseModel.findById(courseAssignment.courseId).exec();
+      if (course) {
+        const progress = progressMap.get(course._id.toString());
+        const progressPercentage = progress ? progress.progressPercentage : 0;
+        const isOverdue = courseAssignment.dueDate < currentDate;
+        const isCompleted = progressPercentage >= 100;
+
+        const videoCount = await this.videosService.getVideoCountByCourseId(course._id.toString());
+        
+        const courseData = {
+          courseId: course._id.toString(),
+          title: course.title,
+          description: course.description,
+          thumbnail: course.thumbnail,
+          dueDate: courseAssignment.dueDate,
+          progressPercentage: progressPercentage,
+          completedVideos: progress ? progress.completedVideos : [],
+          completedQuizzes: progress ? progress.completedQuizzes : [],
+          videoCount,
+        };
+
+        if (isCompleted) {
+          completedCourses.push({
+            ...courseData,
+            completedAt: progress.lastUpdated,
+          });
+        } else if (isOverdue) {
+          const daysOverdue = Math.ceil((currentDate.getTime() - courseAssignment.dueDate.getTime()) / (1000 * 60 * 60 * 24));
+          overdueCourses.push({
+            ...courseData,
+            daysOverdue: daysOverdue,
+          });
+        } else {
+          const daysRemaining = Math.ceil((courseAssignment.dueDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
+          todoCourses.push({
+            ...courseData,
+            daysRemaining: daysRemaining,
+          });
+        }
+      }
+    }
+
+    const total = group.courses.length;
+    const completed = completedCourses.length;
+    const pending = todoCourses.length;
+    const overdue = overdueCourses.length;
+    const completionRate = total > 0 ? (completed / total) * 100 : 0;
+
     return {
       employmentId: employment._id.toString(),
       userId: userId,
       employeeName: employment.fullName,
       employeeEmail: employment.email,
-      ...courseStatus,
+      completed: completedCourses,
+      todo: todoCourses,
+      overdue: overdueCourses,
+      summary: {
+        total,
+        completed,
+        pending,
+        overdue,
+        completionRate: Math.round(completionRate * 100) / 100,
+      },
     };
   }
 } 

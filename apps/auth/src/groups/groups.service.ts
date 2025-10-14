@@ -216,13 +216,37 @@ export class GroupsService {
   }
 
   async findOneWithUsers(id: string): Promise<any> {
+    try {
+    // First, let's check and log the collection data
+    const group = await this.groupModel.findOne({ _id: new Types.ObjectId(id) }).exec();
+
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+    
+    console.log('=== GROUP DATA ===');
+    console.log('Group ID:', group._id);
+    console.log('Group Name:', group.name);
+    console.log('Group courses:', JSON.stringify(group.courses, null, 2));
+    
+    // Check what collection name is being used
+    console.log('Employment collection name:', this.employmentModel.collection.name);
+    console.log('Course collection name:', this.courseModel.collection.name);
+    
+    // Direct query to check employment records
+    const employmentRecords = await this.employmentModel.find({ groupId: new Types.ObjectId(group._id) }).exec();
+    console.log('Direct employment query found:', employmentRecords.length, 'employees');
+    if (employmentRecords.length > 0) {
+      console.log('Employee names:', employmentRecords.map(e => e.fullName));
+    }
+    
     const pipeline = [
       {
         $match: { _id: new Types.ObjectId(id) }
       },
       {
         $lookup: {
-          from: 'employmentdocuments',
+          from: this.employmentModel.collection.name, // Use actual collection name
           localField: '_id',
           foreignField: 'groupId',
           as: 'employees'
@@ -230,7 +254,7 @@ export class GroupsService {
       },
       {
         $lookup: {
-          from: 'courses',
+          from: this.courseModel.collection.name, // Use actual collection name
           localField: 'courses.courseId',
           foreignField: '_id',
           as: 'courseDetails'
@@ -273,29 +297,40 @@ export class GroupsService {
           }
         }
       },
-      {
-        $project: {
-          _id: 1,
-          name: 1,
-          description: 1,
-          createdAt: 1,
-          updatedAt: 1,
-          userId: 1,
-          employees: 1,
-          totalUsers: 1,
-          totalCourses: 1,
-          coursesWithDetails: 1
-        }
-      }
+      // {
+      //   $project: {
+      //     _id: 1,
+      //     name: 1,
+      //     description: 1,
+      //     createdAt: 1,
+      //     updatedAt: 1,
+      //     userId: 1,
+      //     employees: 1,
+      //     totalUsers: 1,
+      //     totalCourses: 1,
+      //     coursesWithDetails: 1
+      //   }
+      // }
     ];
 
     const result = await this.groupModel.aggregate(pipeline).exec();
+    
+    console.log('=== AGGREGATION RESULT ===');
+    console.log('Result length:', result?.length);
+    console.log('Employees count:', result[0]?.employees?.length);
+    console.log('Course details count:', result[0]?.courseDetails?.length);
+    console.log('Courses with details count:', result[0]?.coursesWithDetails?.length);
+    console.log('Full result:', JSON.stringify(result[0], null, 2));
     
     if (!result || result.length === 0) {
       throw new NotFoundException('Group not found');
     }
 
-    return result[0];
+      return result[0];
+    } catch (error) {
+      console.error('Aggregation error:', error);
+      throw new Error(`Failed to fetch group: ${error.message}`);
+    }
   }
 
   async update(id: string, updateGroupDto: UpdateGroupDto): Promise<Group> {
@@ -388,7 +423,7 @@ export class GroupsService {
       name: group.name,
       description: group.description,
       createdAt: (group as any).createdAt || new Date(),
-      totalUsers: userCount,
+      totalUsers: employeeCount,
       totalEmployees: employeeCount,
       totalMembers: userCount + employeeCount,
       // You'll need to implement completion rate logic based on your requirements
@@ -416,7 +451,7 @@ export class GroupsService {
 
     // Prepare course assignment with due date
     const courseAssignment = {
-      courseId: assignCourseDto.courseId,
+      courseId: new Types.ObjectId(assignCourseDto.courseId),
       dueDate: new Date(assignCourseDto.dueDate)
     };
 

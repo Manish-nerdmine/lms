@@ -335,11 +335,6 @@ export class EmploymentService {
             userId: new Types.ObjectId(userId)
           };
 
-          // Hash password if provided in Excel
-          if (row['password']) {
-            employmentData.password = await hashPassword(row['password']);
-          }
-
           if (existingEmployment) {
             // Update existing employment
             await this.employmentRepository.update(
@@ -410,6 +405,7 @@ export class EmploymentService {
           }
         ]
       }).exec();
+      console.log(group);
 
       if (!group) {
         throw new NotFoundException('Group not found');
