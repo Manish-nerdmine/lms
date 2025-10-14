@@ -97,7 +97,7 @@ export class EmailService {
         ${link ? `
           <div style="text-align: center; margin: 30px 0;">
             <a href="${link}" style="background-color: #2196F3; background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); color: #ffffff !important; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(33, 150, 243, 0.4); border: none;">
-              <span style="color: #ffffff;">Sign Up & Start Learning</span>
+              <span style="color:rgba(255, 255, 255, 0.38);">Sign Up & Start Learning</span>
             </a>
           </div>
         ` : ''}
