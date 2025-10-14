@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { Course, UserProgress } from '@app/common/models/lms.schema';
 import { UserDocument } from '@app/common/models/user.schema';
 import { Group } from '@app/common/models/group.schema';
+import { EmploymentDocument } from '@app/common/models/employment.schema';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { CourseUsersProgressResponseDto } from './dto/course-users-progress.dto';
@@ -28,6 +29,7 @@ export class CoursesService {
     @InjectModel(UserProgress.name) private readonly userProgressModel: Model<UserProgress>,
     @InjectModel(UserDocument.name) private readonly userModel: Model<UserDocument>,
     @InjectModel(Group.name) private readonly groupModel: Model<Group>,
+    @InjectModel(EmploymentDocument.name) private readonly employmentModel: Model<EmploymentDocument>,
     private readonly videosService: VideosService,
   ) {
     // Ensure upload directory exists
@@ -462,7 +464,8 @@ export class CoursesService {
 
   async getUserCourseStatus(userId: string): Promise<any> {
     // Find user's group
-    const user = await this.userModel.findById(userId).exec();
+    const user = await this.employmentModel.findById(userId).exec();
+    console.log(user);
     if (!user || !user.groupId) {
       return {
         completed: [],
@@ -626,6 +629,29 @@ export class CoursesService {
       completedQuizzes: userProgress.completedQuizzes.length,
       certificateId: certificateId,
       issuedDate: new Date(),
+    };
+  }
+
+  async getEmploymentCourseStatus(employmentId: string): Promise<any> {
+    // Find employment record
+    const employment = await this.employmentModel.findById(employmentId).exec();
+    if (!employment) {
+      throw new NotFoundException('Employment record not found');
+    }
+
+    // Get the user ID from employment
+    const userId = employment._id.toString();
+
+    // Get course status for this user
+    const courseStatus = await this.getUserCourseStatus(userId);
+
+    // Return with employment details
+    return {
+      employmentId: employment._id.toString(),
+      userId: userId,
+      employeeName: employment.fullName,
+      employeeEmail: employment.email,
+      ...courseStatus,
     };
   }
 } 

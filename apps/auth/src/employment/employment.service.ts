@@ -35,7 +35,6 @@ export class EmploymentService {
       const existingEmployment = await this.employmentRepository.findOneByEmail(createEmploymentDto.email);
       
       if (existingEmployment) {
-        console.log('existingEmployment', existingEmployment);
         // Employment record exists, update it with signup details
         // Set isActive to true and add password
         const hashedPassword = createEmploymentDto.password 
@@ -47,6 +46,7 @@ export class EmploymentService {
           {
             password: hashedPassword,
             isActive: true, // Activate the account when user signs up
+            userId: createEmploymentDto.userId,
           }
         );
 

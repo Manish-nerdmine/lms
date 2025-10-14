@@ -421,6 +421,94 @@ export class CoursesController {
     return this.coursesService.getUserCourseStatus(userId);
   }
 
+  @Get('employment/:employmentId/status')
+  @ApiTags('courses')
+  @ApiParam({ name: 'employmentId', description: 'Employment ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns comprehensive course status for the employee including completed, todo, overdue courses and summary',
+    schema: {
+      type: 'object',
+      properties: {
+        employmentId: { type: 'string' },
+        userId: { type: 'string' },
+        employeeName: { type: 'string' },
+        employeeEmail: { type: 'string' },
+        completed: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              courseId: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string' },
+              thumbnail: { type: 'string' },
+              dueDate: { type: 'string', format: 'date-time' },
+              progressPercentage: { type: 'number' },
+              completedVideos: { type: 'array', items: { type: 'string' } },
+              completedQuizzes: { type: 'array', items: { type: 'string' } },
+              videoCount: { type: 'number' },
+              completedAt: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+        todo: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              courseId: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string' },
+              thumbnail: { type: 'string' },
+              dueDate: { type: 'string', format: 'date-time' },
+              progressPercentage: { type: 'number' },
+              completedVideos: { type: 'array', items: { type: 'string' } },
+              completedQuizzes: { type: 'array', items: { type: 'string' } },
+              videoCount: { type: 'number' },
+              daysRemaining: { type: 'number' },
+            },
+          },
+        },
+        overdue: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              courseId: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string' },
+              thumbnail: { type: 'string' },
+              dueDate: { type: 'string', format: 'date-time' },
+              progressPercentage: { type: 'number' },
+              completedVideos: { type: 'array', items: { type: 'string' } },
+              completedQuizzes: { type: 'array', items: { type: 'string' } },
+              videoCount: { type: 'number' },
+              daysOverdue: { type: 'number' },
+            },
+          },
+        },
+        summary: {
+          type: 'object',
+          properties: {
+            total: { type: 'number' },
+            completed: { type: 'number' },
+            pending: { type: 'number' },
+            overdue: { type: 'number' },
+            completionRate: { type: 'number' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Employment not found or no group assigned',
+  })
+  getEmploymentCourseStatus(@Param('employmentId') employmentId: string) {
+    return this.coursesService.getEmploymentCourseStatus(employmentId);
+  }
+
   @Get('certificate')
   @ApiTags('courses')
   @ApiQuery({ name: 'userId', required: true, description: 'User ID' })

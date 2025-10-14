@@ -5,6 +5,7 @@ import { CoursesController } from './courses.controller';
 import { Course, CourseSchema, UserProgress, UserProgressSchema, Video, VideoSchema } from '@app/common/models/lms.schema';
 import { UserDocument, UserSchema } from '@app/common/models/user.schema';
 import { Group, GroupSchema } from '@app/common/models/group.schema';
+import { EmploymentDocument, EmploymentSchema } from '@app/common/models/employment.schema';
 import { VideosService } from '../videos/videos.service';
 
 @Module({
@@ -15,6 +16,7 @@ import { VideosService } from '../videos/videos.service';
       { name: UserDocument.name, schema: UserSchema },
       { name: Group.name, schema: GroupSchema },
       { name: Video.name, schema: VideoSchema },
+      { name: EmploymentDocument.name, schema: EmploymentSchema },
     ]),
   ],
   controllers: [CoursesController],
