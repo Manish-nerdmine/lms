@@ -509,6 +509,51 @@ export class CoursesController {
     return this.coursesService.getEmploymentCourseStatus(employmentId);
   }
 
+  @Get('user/:userId/unassigned')
+  @ApiTags('courses')
+  @ApiParam({ name: 'userId', description: 'User ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns all courses that are NOT assigned to the user\'s group with group name',
+    schema: {
+      type: 'object',
+      properties: {
+        groupName: { 
+          type: 'string',
+          description: 'Name of the user\'s group (null if user has no group)'
+        },
+        totalUnassignedCourses: { 
+          type: 'number',
+          description: 'Total count of courses not assigned to the group'
+        },
+        unassignedCourses: {
+          type: 'array',
+          description: 'List of courses not assigned to the group',
+          items: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string' },
+              thumbnail: { type: 'string' },
+              userId: { type: 'string' },
+              videoCount: { type: 'number' },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  getUnassignedCourses(@Param('userId') userId: string) {
+    return this.coursesService.getUnassignedCourses(userId);
+  }
+
   @Get('certificate')
   @ApiTags('courses')
   @ApiQuery({ name: 'userId', required: true, description: 'User ID' })
