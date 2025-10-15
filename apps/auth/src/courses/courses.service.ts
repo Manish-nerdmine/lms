@@ -638,7 +638,10 @@ export class CoursesService {
     if(group.length >0) {
       group.map(g => {
         if(g.courses.length ===  0) {
-          groupName.push(g.name);
+          groupName.push({
+            groupName: g.name,
+            _id: g._id,
+          });
         }
       });
     }
