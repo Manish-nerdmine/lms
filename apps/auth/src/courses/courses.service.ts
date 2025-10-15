@@ -631,64 +631,19 @@ export class CoursesService {
   }
 
   async getUnassignedCourses(userId: string): Promise<any> {
+    const group = await this.groupModel.find({userId: new Types.ObjectId(userId) }).exec();
     // Find user by userId
-    const user = await this.userModel.findById(userId).exec();
-    if (!user) {
-      throw new NotFoundException('User not found');
+    let groupName = []
+
+    if(group.length >0) {
+      group.map(g => {
+        if(g.courses.length ===  0) {
+          groupName.push(g.name);
+        }
+      });
     }
-
-    if (!user.groupId) {
-      // User has no group, return all courses
-      const allCourses = await this.courseModel.find().exec();
-      const coursesWithVideoCount = await Promise.all(
-        allCourses.map(async (course) => {
-          const videoCount = await this.videosService.getVideoCountByCourseId(course._id.toString());
-          return {
-            ...course.toObject(),
-            videoCount,
-          };
-        })
-      );
-
-      return {
-        groupName: null,
-        totalUnassignedCourses: coursesWithVideoCount.length,
-        unassignedCourses: coursesWithVideoCount,
-      };
-    }
-
-    // Get user's group
-    const group = await this.groupModel.findById(user.groupId).exec();
-    if (!group) {
-      throw new NotFoundException('Group not found');
-    }
-
-    // Get all courses in the system
-    const allCourses = await this.courseModel.find().exec();
-
-    // Get course IDs that are already assigned to the group
-    const assignedCourseIds = group.courses.map(c => c.courseId?.toString()).filter(Boolean);
-
-    // Filter out courses that are already assigned
-    const unassignedCourses = allCourses.filter(
-      course => !assignedCourseIds.includes(course._id.toString())
-    );
-
-    // Add video count to each course
-    const coursesWithVideoCount = await Promise.all(
-      unassignedCourses.map(async (course) => {
-        const videoCount = await this.videosService.getVideoCountByCourseId(course._id.toString());
-        return {
-          ...course.toObject(),
-          videoCount,
-        };
-      })
-    );
-
     return {
-      groupName: group.name,
-      totalUnassignedCourses: coursesWithVideoCount.length,
-      unassignedCourses: coursesWithVideoCount,
+      groupName,
     };
   }
 

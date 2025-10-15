@@ -514,34 +514,14 @@ export class CoursesController {
   @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiResponse({
     status: 200,
-    description: 'Returns all courses that are NOT assigned to the user\'s group with group name',
+    description: 'Returns the group name for the user',
     schema: {
       type: 'object',
       properties: {
         groupName: { 
           type: 'string',
-          description: 'Name of the user\'s group (null if user has no group)'
-        },
-        totalUnassignedCourses: { 
-          type: 'number',
-          description: 'Total count of courses not assigned to the group'
-        },
-        unassignedCourses: {
-          type: 'array',
-          description: 'List of courses not assigned to the group',
-          items: {
-            type: 'object',
-            properties: {
-              _id: { type: 'string' },
-              title: { type: 'string' },
-              description: { type: 'string' },
-              thumbnail: { type: 'string' },
-              userId: { type: 'string' },
-              videoCount: { type: 'number' },
-              createdAt: { type: 'string', format: 'date-time' },
-              updatedAt: { type: 'string', format: 'date-time' },
-            },
-          },
+          description: 'Name of the user\'s group (null if no group)',
+          example: 'Manish_1'
         },
       },
     },
