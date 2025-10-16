@@ -103,6 +103,26 @@ export class GroupsService {
           totalMembers: { $add: [{ $size: '$users' }, { $size: '$employees' }] }
         }
       },
+
+      {
+        $lookup: {
+          from: 'courses',
+          localField: '_id',
+          foreignField: 'groupId',
+          as: 'courses'
+        }
+      },
+      {
+        $unwind: {
+          path: '$courses',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          totalCourses: { $size: '$courses' }
+        }
+      },
       {
         $project: {
           _id: 1,
@@ -113,6 +133,8 @@ export class GroupsService {
           totalUsers: 1,
           totalEmployees: 1,
           totalMembers: 1,
+          totalCourses: 1,
+          courses: 1,
           //completionRate: 1,
          // users: 0 // Remove the users array, keep only the count
         }
