@@ -102,7 +102,7 @@ export class EmailService {
           </div>
         ` : ''}
 
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+        <div style="background-color:rgb(248, 250, 248); padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
           <p style="color: #666; margin: 0; font-size: 14px;">
             Best,<br>
             <strong style="color: #333;">The ClickShield Team</strong>
