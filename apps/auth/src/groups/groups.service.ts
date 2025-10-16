@@ -103,24 +103,40 @@ export class GroupsService {
           totalMembers: { $add: [{ $size: '$users' }, { $size: '$employees' }] }
         }
       },
-
       {
         $lookup: {
-          from: 'courses',
-          localField: '_id',
-          foreignField: 'groupId',
-          as: 'courses'
-        }
-      },
-      {
-        $unwind: {
-          path: '$courses',
-          preserveNullAndEmptyArrays: true
+          from: this.courseModel.collection.name,
+          localField: 'courses.courseId',
+          foreignField: '_id',
+          as: 'courseDetails'
         }
       },
       {
         $addFields: {
-          totalCourses: { $size: '$courses' }
+          totalCourses: { $size: { $ifNull: ['$courses', []] } },
+          coursesWithDetails: {
+            $map: {
+              input: { $ifNull: ['$courses', []] },
+              as: 'course',
+              in: {
+                courseId: '$$course.courseId',
+                dueDate: '$$course.dueDate',
+                _id: '$$course._id',
+                details: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: '$courseDetails',
+                        as: 'detail',
+                        cond: { $eq: ['$$detail._id', '$$course.courseId'] }
+                      }
+                    },
+                    0
+                  ]
+                }
+              }
+            }
+          }
         }
       },
       {
@@ -134,7 +150,7 @@ export class GroupsService {
           totalEmployees: 1,
           totalMembers: 1,
           totalCourses: 1,
-          courses: 1,
+          courses: '$coursesWithDetails',
           //completionRate: 1,
          // users: 0 // Remove the users array, keep only the count
         }
