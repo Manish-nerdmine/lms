@@ -4,13 +4,14 @@ import { Model, Types } from 'mongoose';
 import { CreateEmploymentDto } from './dto/create-employment.dto';
 import { UpdateEmploymentDto } from './dto/update-employment.dto';
 import { LoginEmploymentDto } from './dto/login-employment.dto';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 import { EmploymentRepository } from './employment.repository';
 import { PasscodeService } from '../passcode/passcode.service';
 import { getHashKeys, comparePassword, hashPassword } from '../utils/common.utils';
 import { Group } from '@app/common/models/group.schema';
 import { Department } from '@app/common/models/department.schema';
 import { UserDocument } from '@app/common/models/user.schema';
-import { Video, Quiz } from '@app/common/models/lms.schema';
+import { Video, Quiz, UserProgress, QuizAttempt, Course } from '@app/common/models/lms.schema';
 import * as XLSX from 'xlsx';
 
 @Injectable()
@@ -22,7 +23,10 @@ export class EmploymentService {
     @InjectModel(Department.name) private readonly departmentModel: Model<Department>,
     @InjectModel(UserDocument.name) private readonly userModel: Model<UserDocument>,
     @InjectModel(Video.name) private readonly videoModel: Model<Video>,
-    @InjectModel(Quiz.name) private readonly quizModel: Model<Quiz>
+    @InjectModel(Quiz.name) private readonly quizModel: Model<Quiz>,
+    @InjectModel(Course.name) private readonly courseModel: Model<Course>,
+    @InjectModel(UserProgress.name) private readonly userProgressModel: Model<UserProgress>,
+    @InjectModel(QuizAttempt.name) private readonly quizAttemptModel: Model<QuizAttempt>
   ) {}
 
   async create(createEmploymentDto: CreateEmploymentDto) {
@@ -532,6 +536,416 @@ export class EmploymentService {
         throw error;
       }
       throw new UnprocessableEntityException(error.message);
+    }
+  }
+
+  /**
+   * Update employee password
+   * @param id - Employment ID
+   * @param updatePasswordDto - Current and new password
+   * @returns Success message
+   */
+  async updatePassword(id: string, updatePasswordDto: UpdatePasswordDto) {
+    try {
+      // Get employment record with password
+      const employment = await this.employmentRepository.findOneByEmail(
+        (await this.employmentRepository.findById(id))?.email
+      );
+      
+      if (!employment) {
+        throw new NotFoundException('Employment record not found');
+      }
+
+      // Check if employment has a password set
+      if (!employment.password) {
+        throw new UnprocessableEntityException(
+          'No password set for this employment account. Please contact administrator.'
+        );
+      }
+
+      // Verify current password
+      const isPasswordValid = await comparePassword(
+        updatePasswordDto.currentPassword, 
+        employment.password
+      );
+      
+      if (!isPasswordValid) {
+        throw new UnprocessableEntityException('Current password is incorrect');
+      }
+
+      // Check if new password is different from current password
+      const isSamePassword = await comparePassword(
+        updatePasswordDto.newPassword, 
+        employment.password
+      );
+      
+      if (isSamePassword) {
+        throw new UnprocessableEntityException('New password must be different from current password');
+      }
+
+      // Hash new password
+      const hashedPassword = await hashPassword(updatePasswordDto.newPassword);
+
+      // Update password
+      const updatedEmployment = await this.employmentRepository.update(id, {
+        password: hashedPassword
+      });
+
+      if (!updatedEmployment) {
+        throw new NotFoundException('Failed to update password');
+      }
+
+      return {
+        message: 'Password updated successfully',
+        employmentId: id
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof UnprocessableEntityException) {
+        throw error;
+      }
+      throw new UnprocessableEntityException(error.message);
+    }
+  }
+
+  /**
+   * Submit quiz for employee with scoring: 1 mark per question, minimum 8/10 to pass
+   * @param employmentId - Employment ID
+   * @param courseId - Course ID
+   * @param quizId - Quiz ID
+   * @param answers - Array of answer indices
+   * @returns Quiz result with score and pass status
+   */
+  async submitQuiz(employmentId: string, courseId: string, quizId: string, answers: number[]) {
+    try {
+      // Verify employment exists
+      const employment = await this.employmentRepository.findById(employmentId);
+      if (!employment) {
+        throw new NotFoundException('Employment record not found');
+      }
+
+      // Verify quiz exists
+      const quiz = await this.quizModel.findById(quizId).exec();
+      if (!quiz) {
+        throw new NotFoundException('Quiz not found');
+      }
+
+      // Verify course exists
+      const course = await this.courseModel.findById(courseId).exec();
+      if (!course) {
+        throw new NotFoundException('Course not found');
+      }
+
+      // Check if quiz belongs to the course
+      const quizBelongsToCourse = course.quizzes.some(q => q.toString() === quizId);
+      if (!quizBelongsToCourse) {
+        throw new BadRequestException('Quiz does not belong to this course');
+      }
+
+      // Calculate score: 1 mark per question
+      const totalQuestions = quiz.questions.length;
+      let correctAnswers = 0;
+
+      quiz.questions.forEach((question, index) => {
+        if (answers[index] === question.correctAnswer) {
+          correctAnswers++;
+        }
+      });
+
+      const score = correctAnswers; // 1 mark per correct answer
+      
+      // Determine pass status: minimum 8 out of 10 (80%)
+      const passingThreshold = Math.ceil(totalQuestions * 0.8); // 80% passing score
+      const isPassed = correctAnswers >= passingThreshold;
+
+      // Save quiz attempt
+      const quizAttempt = new this.quizAttemptModel({
+        employmentId: new Types.ObjectId(employmentId),
+        quizId: new Types.ObjectId(quizId),
+        userAnswers: answers,
+        score,
+        totalQuestions,
+        correctAnswers,
+        isPassed,
+        completedAt: new Date()
+      });
+
+      await quizAttempt.save();
+
+      // Update progress if quiz is passed
+      if (isPassed) {
+        await this.markQuizComplete(employmentId, courseId, quizId);
+      }
+
+      return {
+        message: isPassed ? 'Quiz passed successfully!' : 'Quiz submitted but not passed',
+        attemptId: quizAttempt._id,
+        score,
+        totalQuestions,
+        correctAnswers,
+        wrongAnswers: totalQuestions - correctAnswers,
+        percentage: Math.round((correctAnswers / totalQuestions) * 100),
+        isPassed,
+        passingThreshold,
+        requiredScore: passingThreshold,
+        feedback: isPassed 
+          ? `Congratulations! You scored ${score}/${totalQuestions}` 
+          : `You scored ${score}/${totalQuestions}. You need at least ${passingThreshold}/${totalQuestions} to pass.`
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new UnprocessableEntityException(error.message);
+    }
+  }
+
+  /**
+   * Mark video as complete for employee
+   * @param employmentId - Employment ID
+   * @param courseId - Course ID
+   * @param videoId - Video ID
+   * @returns Updated progress
+   */
+  async markVideoComplete(employmentId: string, courseId: string, videoId: string) {
+    try {
+      // Verify employment exists
+      const employment = await this.employmentRepository.findById(employmentId);
+      if (!employment) {
+        throw new NotFoundException('Employment record not found');
+      }
+
+      // Verify course exists
+      const course = await this.courseModel.findById(courseId).exec();
+      if (!course) {
+        throw new NotFoundException('Course not found');
+      }
+
+      // Verify video belongs to course
+      const videoBelongsToCourse = course.videos.some(v => v.toString() === videoId);
+      if (!videoBelongsToCourse) {
+        throw new BadRequestException('Video does not belong to this course');
+      }
+
+      // Find or create progress record
+      let progress = await this.userProgressModel.findOne({
+        employmentId: new Types.ObjectId(employmentId),
+        courseId: new Types.ObjectId(courseId)
+      }).exec();
+
+      if (!progress) {
+        progress = new this.userProgressModel({
+          employmentId: new Types.ObjectId(employmentId),
+          courseId: new Types.ObjectId(courseId),
+          completedVideos: [],
+          completedQuizzes: [],
+          progressPercentage: 0,
+          isCourseCompleted: false
+        });
+      }
+
+      // Add video to completed if not already there
+      if (!progress.completedVideos.includes(videoId)) {
+        progress.completedVideos.push(videoId);
+      }
+
+      // Update progress percentage
+      await this.updateProgressPercentage(progress, course);
+      await progress.save();
+
+      return {
+        message: 'Video marked as complete',
+        progress: {
+          completedVideos: progress.completedVideos.length,
+          completedQuizzes: progress.completedQuizzes.length,
+          progressPercentage: progress.progressPercentage,
+          isCourseCompleted: progress.isCourseCompleted
+        }
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new UnprocessableEntityException(error.message);
+    }
+  }
+
+  /**
+   * Mark quiz as complete for employee (private helper)
+   */
+  private async markQuizComplete(employmentId: string, courseId: string, quizId: string) {
+    // Verify course exists
+    const course = await this.courseModel.findById(courseId).exec();
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    // Find or create progress record
+    let progress = await this.userProgressModel.findOne({
+      employmentId: new Types.ObjectId(employmentId),
+      courseId: new Types.ObjectId(courseId)
+    }).exec();
+
+    if (!progress) {
+      progress = new this.userProgressModel({
+        employmentId: new Types.ObjectId(employmentId),
+        courseId: new Types.ObjectId(courseId),
+        completedVideos: [],
+        completedQuizzes: [],
+        progressPercentage: 0,
+        isCourseCompleted: false
+      });
+    }
+
+    // Add quiz to completed if not already there
+    if (!progress.completedQuizzes.includes(quizId)) {
+      progress.completedQuizzes.push(quizId);
+    }
+
+    // Update progress percentage
+    await this.updateProgressPercentage(progress, course);
+    await progress.save();
+
+    return progress;
+  }
+
+  /**
+   * Get employee progress for a course
+   * @param employmentId - Employment ID
+   * @param courseId - Course ID
+   * @returns Progress details
+   */
+  async getEmployeeProgress(employmentId: string, courseId: string) {
+    try {
+      // Verify employment exists
+      const employment = await this.employmentRepository.findById(employmentId);
+      if (!employment) {
+        throw new NotFoundException('Employment record not found');
+      }
+
+      // Verify course exists
+      const course = await this.courseModel.findById(courseId)
+        .populate('videos')
+        .populate('quizzes')
+        .exec();
+      if (!course) {
+        throw new NotFoundException('Course not found');
+      }
+
+      // Find progress record
+      let progress = await this.userProgressModel.findOne({
+        employmentId: new Types.ObjectId(employmentId),
+        courseId: new Types.ObjectId(courseId)
+      }).exec();
+
+      if (!progress) {
+        // Create initial progress record
+        progress = new this.userProgressModel({
+          employmentId: new Types.ObjectId(employmentId),
+          courseId: new Types.ObjectId(courseId),
+          completedVideos: [],
+          completedQuizzes: [],
+          progressPercentage: 0,
+          isCourseCompleted: false
+        });
+        await progress.save();
+      }
+
+      // Get quiz attempts
+      const quizAttempts = await this.quizAttemptModel.find({
+        employmentId: new Types.ObjectId(employmentId),
+        quizId: { $in: course.quizzes }
+      }).populate('quizId', 'title').exec();
+
+      return {
+        employmentId,
+        courseId,
+        courseName: course.title,
+        progress: {
+          completedVideos: progress.completedVideos.length,
+          totalVideos: course.videos.length,
+          completedQuizzes: progress.completedQuizzes.length,
+          totalQuizzes: course.quizzes.length,
+          progressPercentage: progress.progressPercentage,
+          isCourseCompleted: progress.isCourseCompleted
+        },
+        quizAttempts: quizAttempts.map(attempt => ({
+          quizId: attempt.quizId,
+          score: attempt.score,
+          totalQuestions: attempt.totalQuestions,
+          correctAnswers: attempt.correctAnswers,
+          isPassed: attempt.isPassed,
+          completedAt: attempt.completedAt
+        })),
+        completedVideoIds: progress.completedVideos,
+        completedQuizIds: progress.completedQuizzes
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new UnprocessableEntityException(error.message);
+    }
+  }
+
+  /**
+   * Get all quiz attempts for an employee
+   * @param employmentId - Employment ID
+   * @param quizId - Optional quiz ID to filter
+   * @returns List of quiz attempts
+   */
+  async getEmployeeQuizAttempts(employmentId: string, quizId?: string) {
+    try {
+      const query: any = { employmentId: new Types.ObjectId(employmentId) };
+      if (quizId) {
+        query.quizId = new Types.ObjectId(quizId);
+      }
+
+      const attempts = await this.quizAttemptModel.find(query)
+        .populate('quizId', 'title description')
+        .sort({ completedAt: -1 })
+        .exec();
+
+      return {
+        totalAttempts: attempts.length,
+        attempts: attempts.map(attempt => ({
+          attemptId: attempt._id,
+          quizId: attempt.quizId,
+          score: attempt.score,
+          totalQuestions: attempt.totalQuestions,
+          correctAnswers: attempt.correctAnswers,
+          wrongAnswers: attempt.totalQuestions - attempt.correctAnswers,
+          percentage: Math.round((attempt.correctAnswers / attempt.totalQuestions) * 100),
+          isPassed: attempt.isPassed,
+          completedAt: attempt.completedAt
+        }))
+      };
+    } catch (error) {
+      throw new UnprocessableEntityException(error.message);
+    }
+  }
+
+  /**
+   * Update progress percentage based on completed items
+   * @param progress - Progress document
+   * @param course - Course document
+   */
+  private async updateProgressPercentage(progress: any, course: any): Promise<void> {
+    const totalVideos = course.videos.length;
+    const totalQuizzes = course.quizzes.length;
+    const totalItems = totalVideos + totalQuizzes;
+
+    if (totalItems === 0) {
+      progress.progressPercentage = 0;
+      progress.isCourseCompleted = false;
+      return;
+    }
+
+    const completedItems = progress.completedVideos.length + progress.completedQuizzes.length;
+    progress.progressPercentage = Math.round((completedItems / totalItems) * 100);
+
+    // Mark course as completed if all items are done
+    if (completedItems === totalItems) {
+      progress.isCourseCompleted = true;
     }
   }
 }

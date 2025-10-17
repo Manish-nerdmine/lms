@@ -93,8 +93,11 @@ export class Quiz extends Document {
 
 @Schema({ timestamps: true })
 export class UserProgress extends Document {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  userId: string;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: false })
+  userId?: string;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'EmploymentDocument', required: false })
+  employmentId?: string;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Course', required: true })
   courseId: Course;
@@ -107,12 +110,18 @@ export class UserProgress extends Document {
 
   @Prop({ default: 0 })
   progressPercentage: number;
+
+  @Prop({ default: false })
+  isCourseCompleted: boolean;
 }
 
 @Schema({ timestamps: true })
 export class QuizAttempt extends Document {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  userId: string;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: false })
+  userId?: string;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'EmploymentDocument', required: false })
+  employmentId?: string;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Quiz', required: true })
   quizId: Quiz;
@@ -122,6 +131,12 @@ export class QuizAttempt extends Document {
 
   @Prop({ default: 0 })
   score: number;
+
+  @Prop({ default: 0 })
+  totalQuestions: number;
+
+  @Prop({ default: 0 })
+  correctAnswers: number;
 
   @Prop({ default: false })
   isPassed: boolean;

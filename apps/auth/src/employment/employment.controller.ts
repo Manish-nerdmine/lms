@@ -5,6 +5,9 @@ import { EmploymentService } from './employment.service';
 import { CreateEmploymentDto } from './dto/create-employment.dto';
 import { LoginEmploymentDto } from './dto/login-employment.dto';
 import { UpdateEmploymentDto } from './dto/update-employment.dto';
+import { UpdatePasswordDto } from './dto/update-password.dto';
+import { SubmitQuizDto } from './dto/submit-quiz.dto';
+import { MarkVideoCompleteDto } from './dto/mark-video-complete.dto';
 
 @ApiTags('Employment')
 @Controller('employment')
@@ -110,6 +113,172 @@ export class EmploymentController {
     @Body() updateEmploymentDto: UpdateEmploymentDto,
   ) {
     return await this.employmentService.updateEmployment(id, updateEmploymentDto);
+  }
+
+  @Patch(':id/update-password')
+  @ApiOperation({ summary: 'Update employee password' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Password updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Password updated successfully' },
+        employmentId: { type: 'string', example: '657e902c4b628d1f0fc8f09e' }
+      }
+    }
+  })
+  @ApiResponse({ status: 404, description: 'Employment record not found' })
+  @ApiResponse({ status: 422, description: 'Current password is incorrect or validation error' })
+  async updatePassword(
+    @Param('id') id: string,
+    @Body() updatePasswordDto: UpdatePasswordDto,
+  ) {
+    return await this.employmentService.updatePassword(id, updatePasswordDto);
+  }
+
+  @Post(':id/submit-quiz')
+  @ApiOperation({ summary: 'Submit quiz for employee (1 mark per question, minimum 8/10 to pass)' })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Quiz submitted successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Quiz passed successfully!' },
+        attemptId: { type: 'string' },
+        score: { type: 'number', example: 9 },
+        totalQuestions: { type: 'number', example: 10 },
+        correctAnswers: { type: 'number', example: 9 },
+        wrongAnswers: { type: 'number', example: 1 },
+        percentage: { type: 'number', example: 90 },
+        isPassed: { type: 'boolean', example: true },
+        passingThreshold: { type: 'number', example: 8 },
+        requiredScore: { type: 'number', example: 8 },
+        feedback: { type: 'string', example: 'Congratulations! You scored 9/10' }
+      }
+    }
+  })
+  @ApiResponse({ status: 404, description: 'Employment, course, or quiz not found' })
+  @ApiResponse({ status: 400, description: 'Quiz does not belong to the course' })
+  async submitQuiz(
+    @Param('id') employmentId: string,
+    @Body() submitQuizDto: SubmitQuizDto,
+  ) {
+    return await this.employmentService.submitQuiz(
+      employmentId,
+      submitQuizDto.courseId,
+      submitQuizDto.quizId,
+      submitQuizDto.answers
+    );
+  }
+
+  @Post(':id/mark-video-complete')
+  @ApiOperation({ summary: 'Mark video as complete for employee' })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Video marked as complete',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Video marked as complete' },
+        progress: {
+          type: 'object',
+          properties: {
+            completedVideos: { type: 'number', example: 5 },
+            completedQuizzes: { type: 'number', example: 2 },
+            progressPercentage: { type: 'number', example: 70 },
+            isCourseCompleted: { type: 'boolean', example: false }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 404, description: 'Employment or course not found' })
+  @ApiResponse({ status: 400, description: 'Video does not belong to the course' })
+  async markVideoComplete(
+    @Param('id') employmentId: string,
+    @Body() markVideoCompleteDto: MarkVideoCompleteDto,
+  ) {
+    return await this.employmentService.markVideoComplete(
+      employmentId,
+      markVideoCompleteDto.courseId,
+      markVideoCompleteDto.videoId
+    );
+  }
+
+  @Get(':id/progress/:courseId')
+  @ApiOperation({ summary: 'Get employee progress for a specific course' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Employee progress retrieved',
+    schema: {
+      type: 'object',
+      properties: {
+        employmentId: { type: 'string' },
+        courseId: { type: 'string' },
+        courseName: { type: 'string', example: 'Cybersecurity Fundamentals' },
+        progress: {
+          type: 'object',
+          properties: {
+            completedVideos: { type: 'number', example: 5 },
+            totalVideos: { type: 'number', example: 10 },
+            completedQuizzes: { type: 'number', example: 2 },
+            totalQuizzes: { type: 'number', example: 3 },
+            progressPercentage: { type: 'number', example: 54 },
+            isCourseCompleted: { type: 'boolean', example: false }
+          }
+        },
+        quizAttempts: { type: 'array' },
+        completedVideoIds: { type: 'array' },
+        completedQuizIds: { type: 'array' }
+      }
+    }
+  })
+  @ApiResponse({ status: 404, description: 'Employment or course not found' })
+  async getEmployeeProgress(
+    @Param('id') employmentId: string,
+    @Param('courseId') courseId: string,
+  ) {
+    return await this.employmentService.getEmployeeProgress(employmentId, courseId);
+  }
+
+  @Get(':id/quiz-attempts')
+  @ApiOperation({ summary: 'Get all quiz attempts for an employee' })
+  @ApiQuery({ name: 'quizId', required: false, description: 'Filter by specific quiz ID' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Quiz attempts retrieved',
+    schema: {
+      type: 'object',
+      properties: {
+        totalAttempts: { type: 'number', example: 5 },
+        attempts: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              attemptId: { type: 'string' },
+              quizId: { type: 'object' },
+              score: { type: 'number', example: 9 },
+              totalQuestions: { type: 'number', example: 10 },
+              correctAnswers: { type: 'number', example: 9 },
+              wrongAnswers: { type: 'number', example: 1 },
+              percentage: { type: 'number', example: 90 },
+              isPassed: { type: 'boolean', example: true },
+              completedAt: { type: 'string', format: 'date-time' }
+            }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 404, description: 'Employment not found' })
+  async getEmployeeQuizAttempts(
+    @Param('id') employmentId: string,
+    @Query('quizId') quizId?: string,
+  ) {
+    return await this.employmentService.getEmployeeQuizAttempts(employmentId, quizId);
   }
 }
 
