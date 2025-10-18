@@ -55,8 +55,16 @@ export class CoursesService {
       }
     }
 
+    // Check if the user is a super admin
+    const user = await this.userModel.findById(createCourseDto.userId).exec();
+    const isSuperAdminCourse = user?.isSuperAdmin === true;
+
     // Create the course first to get the ID
-    const course = new this.courseModel({ ...createCourseDto, userId: new Types.ObjectId(createCourseDto.userId) });
+    const course = new this.courseModel({ 
+      ...createCourseDto, 
+      userId: new Types.ObjectId(createCourseDto.userId),
+      isSuperAdminCourse
+    });
     const savedCourse = await course.save();
 
     // Now generate the thumbnail URL with the course ID
@@ -78,7 +86,8 @@ export class CoursesService {
   }
 
   async findAll(userId?: string): Promise<any[]> {
-    const filter = userId ? { userId } : {};
+    // Include super admin courses for all users
+    const filter = userId ? { $or: [{ userId }, { isSuperAdminCourse: true }] } : {};
     const courses = await this.courseModel.find(filter).populate('videos').populate('quizzes').populate('userId', 'fullName email').exec();
     
     // Add video count and fix thumbnail URLs for each course

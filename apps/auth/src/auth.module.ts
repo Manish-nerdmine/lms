@@ -22,6 +22,7 @@ import { QuizAttemptsModule } from './quiz-attempts/quiz-attempts.module';
 import { UserProgressModule } from './user-progress/user-progress.module';
 import { EmploymentModule } from './employment/employment.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { SuperAdminModule } from './super-admin/super-admin.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     UserProgressModule,
     EmploymentModule,
     DashboardModule,
+    SuperAdminModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, PasscodeService, PasscodeRepository, ClientsModule],

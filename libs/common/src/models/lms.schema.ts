@@ -24,6 +24,9 @@ export class Course extends Document {
   @Prop({ default: true })
   isActive: boolean;
 
+  @Prop({ default: false })
+  isSuperAdminCourse?: boolean;
+
   createdAt?: Date;
   updatedAt?: Date;
 }
