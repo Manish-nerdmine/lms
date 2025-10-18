@@ -21,6 +21,7 @@ import { CoursesModule } from './courses/courses.module';
 import { QuizAttemptsModule } from './quiz-attempts/quiz-attempts.module';
 import { UserProgressModule } from './user-progress/user-progress.module';
 import { EmploymentModule } from './employment/employment.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { EmploymentModule } from './employment/employment.module';
     QuizAttemptsModule,
     UserProgressModule,
     EmploymentModule,
+    DashboardModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, PasscodeService, PasscodeRepository, ClientsModule],
