@@ -23,6 +23,9 @@ export class Course extends Document {
 
   @Prop({ default: true })
   isActive: boolean;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 @Schema({ timestamps: true })

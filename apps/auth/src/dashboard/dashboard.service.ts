@@ -332,7 +332,12 @@ export class DashboardService {
     const now = new Date();
 
     return newCourses.map(course => {
-      const diffTime = Math.abs(now.getTime() - course.createdAt.getTime());
+      // Ensure createdAt is a Date
+      const createdAt = course.createdAt instanceof Date
+        ? course.createdAt
+        : new Date(course.createdAt);
+
+      const diffTime = Math.abs(now.getTime() - createdAt.getTime());
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       
       let createdAgo: string;
@@ -354,7 +359,7 @@ export class DashboardService {
         courseId: course._id.toString(),
         courseName: course.title,
         createdAgo,
-        createdAt: course.createdAt
+        createdAt: createdAt
       };
     });
   }
