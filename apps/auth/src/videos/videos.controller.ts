@@ -45,7 +45,7 @@ export class VideosController {
         video: {
           type: 'string',
           format: 'binary',
-          description: 'Video file (MP4, AVI, MOV, WMV, MKV, WebM, or FLV)',
+          description: 'Video file (MP4, AVI, MOV, WMV, MKV, WebM, or FLV) or PPT file (PPT, PPTX)',
         },
         title: {
           type: 'string',
