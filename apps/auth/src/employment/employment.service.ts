@@ -255,7 +255,7 @@ export class EmploymentService {
       // Add pagination
       pipeline.push({ $skip: skip });
       pipeline.push({ $limit: limit });
-      pipeline.push({ $sort: { createdAt: -1 } });
+      pipeline.push({ $sort: { createdAt: -1 } }); // Latest first
 
       // Execute queries
       const [employments, countResult] = await Promise.all([
