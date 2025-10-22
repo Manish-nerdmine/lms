@@ -226,6 +226,7 @@ export class EmploymentService {
           }
         });
       }
+      pipeline.push({ $sort: { createdAt: -1 } }); // Latest first
 
       // Add projection
       pipeline.push({
@@ -250,12 +251,13 @@ export class EmploymentService {
       });
 
       // Get total count before pagination
+      pipeline.push({ $sort: { createdAt: -1 } }); // Latest first
       const countPipeline = [...pipeline, { $count: 'total' }];
       
       // Add pagination
       pipeline.push({ $skip: skip });
       pipeline.push({ $limit: limit });
-      pipeline.push({ $sort: { createdAt: -1 } }); // Latest first
+     
 
       // Execute queries
       const [employments, countResult] = await Promise.all([
