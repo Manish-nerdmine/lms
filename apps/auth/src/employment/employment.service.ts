@@ -255,6 +255,7 @@ export class EmploymentService {
       // Add pagination
       pipeline.push({ $skip: skip });
       pipeline.push({ $limit: limit });
+      pipeline.push({ $sort: { createdAt: -1 } });
 
       // Execute queries
       const [employments, countResult] = await Promise.all([
@@ -320,11 +321,7 @@ export class EmploymentService {
         try {
           // Validate required fields
           if (!row['fullName'] || !row['email'] || !row['role']) {
-            results.failed.push({
-              row,
-              reason: 'Missing required fields: fullName, email, or role',
-            });
-            continue;
+            throw new BadRequestException('Missing required fields: fullName, email, or role');
           }
 
           // Check if employment already exists
@@ -948,5 +945,8 @@ export class EmploymentService {
       progress.isCourseCompleted = true;
     }
   }
+
+
+  
 }
 

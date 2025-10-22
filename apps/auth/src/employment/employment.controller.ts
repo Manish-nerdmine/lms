@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, UseGuards, Request, Query, UseInterceptors, UploadedFile, Put, Patch } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, UseGuards, Request, Query, UseInterceptors, UploadedFile, Put, Patch, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { EmploymentService } from './employment.service';
@@ -279,6 +279,14 @@ export class EmploymentController {
     @Query('quizId') quizId?: string,
   ) {
     return await this.employmentService.getEmployeeQuizAttempts(employmentId, quizId);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete employment record' })
+  @ApiResponse({ status: 200, description: 'Employment record deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Employment record not found' })
+  async deleteEmployment(@Param('id') id: string) {
+    return await this.employmentService.deleteEmployment(id);
   }
 }
 

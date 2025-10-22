@@ -58,4 +58,8 @@ export class EmploymentRepository {
   async aggregate(pipeline: any[]): Promise<any[]> {
     return this.employmentModel.aggregate(pipeline).exec();
   }
+
+  async findOneAndDelete(id: Types.ObjectId): Promise<EmploymentDocument | null> {
+    return this.employmentModel.findByIdAndDelete(id).exec();
+  }
 }

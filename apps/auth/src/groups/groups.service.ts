@@ -46,13 +46,6 @@ export class GroupsService {
 
   async create(createGroupDto: CreateGroupDto): Promise<Group> {
     // Check if group name already exists
-    const existingGroup = await this.groupModel.findOne({ 
-      name: createGroupDto.name
-    }).exec();
-    
-    if (existingGroup) {
-      throw new ConflictException('Group with this name already exists');
-    }
 
     const group = new this.groupModel(createGroupDto);
     return group.save();
