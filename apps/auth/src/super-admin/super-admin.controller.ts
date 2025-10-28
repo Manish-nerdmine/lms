@@ -1,9 +1,10 @@
-import { Controller, Post, Get, Body, Param, Patch, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Patch, Delete, UseGuards, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { SuperAdminService } from './super-admin.service';
 import { CreateSuperAdminDto } from './dto/create-super-admin.dto';
 import { PasscodeAuthGuard } from '@app/common/auth/passcode-auth.guard';
 import { SuperAdminGuard } from '@app/common/auth/super-admin.guard';
+import { Response } from 'express';
 
 @ApiTags('Super Admin')
 @Controller('super-admin')
@@ -93,6 +94,75 @@ export class SuperAdminController {
   @ApiResponse({ status: 403, description: 'Access denied. Super admin privileges required.' })
   async removeSuperAdmin(@Param('userId') userId: string) {
     return await this.superAdminService.removeSuperAdmin(userId);
+  }
+
+  @Get('dashboard/stats')
+  @UseGuards(PasscodeAuthGuard, SuperAdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get dashboard statistics (Super admin only)' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Dashboard statistics retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        totalUsers: { type: 'number', example: 150 },
+        totalCourses: { type: 'number', example: 25 },
+        totalEmployedUsers: { type: 'number', example: 120 }
+      }
+    }
+  })
+  @ApiResponse({ status: 403, description: 'Access denied. Super admin privileges required.' })
+  async getDashboardStats() {
+    return await this.superAdminService.getDashboardStats();
+  }
+
+  @Get('user/:userId/export')
+  @UseGuards(PasscodeAuthGuard, SuperAdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Export user complete information to Excel (Super admin only)' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Excel file generated successfully',
+    content: {
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
+        schema: {
+          type: 'string',
+          format: 'binary'
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 403, description: 'Access denied. Super admin privileges required.' })
+  async exportUserToExcel(@Param('userId') userId: string, @Res() res: Response) {
+    const result = await this.superAdminService.exportUserToExcel(userId);
+    
+    res.setHeader('Content-Type', result.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.buffer);
+  }
+
+  @Get('user/:userId')
+  @UseGuards(PasscodeAuthGuard, SuperAdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get complete user information (Super admin only)' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'User details retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        user: { type: 'object' },
+        employment: { type: 'object' },
+        progress: { type: 'array', items: { type: 'object' } }
+      }
+    }
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 403, description: 'Access denied. Super admin privileges required.' })
+  async getUserDetails(@Param('userId') userId: string) {
+    return await this.superAdminService.getUserDetails(userId);
   }
 }
 
