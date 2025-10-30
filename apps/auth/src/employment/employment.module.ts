@@ -9,6 +9,7 @@ import { Department, DepartmentSchema } from '@app/common/models/department.sche
 import { UserDocument, UserSchema } from '@app/common/models/user.schema';
 import { Video, VideoSchema, Quiz, QuizSchema, Course, CourseSchema, UserProgress, UserProgressSchema, QuizAttempt, QuizAttemptSchema } from '@app/common/models/lms.schema';
 import { PasscodeModule } from '../passcode/passcode.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { PasscodeModule } from '../passcode/passcode.module';
       { name: QuizAttempt.name, schema: QuizAttemptSchema },
     ]),
     PasscodeModule,
+    EmailModule,
   ],
   controllers: [EmploymentController],
   providers: [EmploymentService, EmploymentRepository],

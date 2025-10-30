@@ -62,4 +62,8 @@ export class EmploymentRepository {
   async findOneAndDelete(id: Types.ObjectId): Promise<EmploymentDocument | null> {
     return this.employmentModel.findByIdAndDelete(id).exec();
   }
+
+  async findAllInactive(): Promise<EmploymentDocument[]> {
+    return this.employmentModel.find({ isActive: false }).exec();
+  }
 }

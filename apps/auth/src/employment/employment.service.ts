@@ -7,7 +7,9 @@ import { LoginEmploymentDto } from './dto/login-employment.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { EmploymentRepository } from './employment.repository';
 import { PasscodeService } from '../passcode/passcode.service';
+import { EmailService } from '../email/email.service';
 import { getHashKeys, comparePassword, hashPassword } from '../utils/common.utils';
+import { ServerUtils } from '../utils/server.utils';
 import { Group } from '@app/common/models/group.schema';
 import { Department } from '@app/common/models/department.schema';
 import { UserDocument } from '@app/common/models/user.schema';
@@ -19,6 +21,7 @@ export class EmploymentService {
   constructor(
     private readonly employmentRepository: EmploymentRepository,
     private readonly passcodeService: PasscodeService,
+    private readonly emailService: EmailService,
     @InjectModel(Group.name) private readonly groupModel: Model<Group>,
     @InjectModel(Department.name) private readonly departmentModel: Model<Department>,
     @InjectModel(UserDocument.name) private readonly userModel: Model<UserDocument>,
@@ -956,7 +959,200 @@ export class EmploymentService {
     return employment;
   }
 
+  async sendReminderEmailsToInactiveAccounts(): Promise<any> {
+    try {
+      // Find all inactive employment accounts (accounts that haven't been activated yet)
+      const inactiveAccounts = await this.employmentRepository.findAllInactive();
+      
+      const results = {
+        total: inactiveAccounts.length,
+        sent7Day: 0,
+        sent15Day: 0,
+        errors: [],
+      };
 
-  
+      const currentDate = new Date();
+
+      for (const employment of inactiveAccounts) {
+        try {
+          // Get the creation date
+          const createdAt = (employment as any).createdAt;
+          if (!createdAt) {
+            continue;
+          }
+
+          const daysDiff = Math.floor((currentDate.getTime() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24));
+
+          // Get the user's group and assigned courses
+          if (employment.groupId) {
+            const group = await this.groupModel.findById(employment.groupId).exec();
+            if (group && group.courses && group.courses.length > 0) {
+              // Get the first assigned course (you can modify this logic as needed)
+              const courseId = group.courses[0].courseId;
+              const course = await this.courseModel.findById(courseId).exec();
+
+              if (course) {
+                // Get frontend URL from ServerUtils
+                const frontendUrl = ServerUtils.getFrontendUrl();
+                const signupLink = `${frontendUrl}/signup?email=${employment.email}&name=${employment.fullName}&role=${employment.role}`;
+
+                // Send 7-day reminder
+                if (daysDiff === 7 || daysDiff === 8) {
+                  await this.emailService.send7DayReminderEmail(
+                    employment.email,
+                    employment.fullName,
+                    course.title,
+                    signupLink
+                  );
+                  results.sent7Day++;
+                }
+
+                // Send 15-day reminder
+                if (daysDiff === 15 || daysDiff === 16) {
+                  await this.emailService.send15DayReminderEmail(
+                    employment.email,
+                    employment.fullName,
+                    course.title,
+                    signupLink
+                  );
+                  results.sent15Day++;
+                }
+              }
+            }
+          }
+        } catch (error) {
+          results.errors.push({
+            email: employment.email,
+            error: error.message,
+          });
+        }
+      }
+
+      return {
+        message: 'Reminder emails processed',
+        results,
+      };
+    } catch (error) {
+      throw new Error(`Failed to send reminder emails: ${error.message}`);
+    }
+  }
+
+  async sendOverdueReminderEmails(): Promise<any> {
+    try {
+      // Get all active employment accounts
+      const activeAccounts = await this.employmentRepository.find({ isActive: true });
+      
+      const results = {
+        total: 0,
+        sent7Day: 0,
+        sent15Day: 0,
+        sent24Hour: 0,
+        errors: [],
+      };
+
+      const currentDate = new Date();
+
+      for (const employment of activeAccounts) {
+        try {
+          if (!employment.groupId) {
+            continue;
+          }
+
+          // Get the employee's group and assigned courses
+          const group = await this.groupModel.findById(employment.groupId).exec();
+          if (!group || !group.courses || group.courses.length === 0) {
+            continue;
+          }
+
+          // Check each course for the employee
+          for (const courseAssignment of group.courses) {
+            const course = await this.courseModel.findById(courseAssignment.courseId).exec();
+            if (!course) {
+              continue;
+            }
+
+            // Check if course is overdue
+            const isOverdue = new Date(courseAssignment.dueDate) < currentDate;
+            if (!isOverdue) {
+              continue;
+            }
+
+            // Get employee's progress for this course
+            const progress = await this.userProgressModel.findOne({
+              courseId: courseAssignment.courseId,
+              $or: [
+                { userId: employment.userId },
+                { employmentId: employment._id }
+              ]
+            }).exec();
+
+            // Check if course is completed
+            if (progress && progress.isCourseCompleted) {
+              continue;
+            }
+
+            results.total++;
+
+            const daysOverdue = Math.floor((currentDate.getTime() - new Date(courseAssignment.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+            const frontendUrl = ServerUtils.getFrontendUrl();
+            const loginLink = `${frontendUrl}/login?email=${employment.email}`;
+
+            // Calculate final deadline (due date + 30 days)
+            const finalDeadline = new Date(courseAssignment.dueDate);
+            finalDeadline.setDate(finalDeadline.getDate() + 30);
+            const hoursUntilFinal = Math.floor((finalDeadline.getTime() - currentDate.getTime()) / (1000 * 60 * 60));
+
+            // Send 7-day overdue reminder
+            if (daysOverdue === 7 || daysOverdue === 8) {
+              await this.emailService.send7DayOverdueReminderEmail(
+                employment.email,
+                employment.fullName,
+                course.title,
+                new Date(courseAssignment.dueDate),
+                loginLink
+              );
+              results.sent7Day++;
+            }
+
+            // Send 15-day overdue reminder
+            if (daysOverdue === 15 || daysOverdue === 16) {
+              await this.emailService.send15DayOverdueReminderEmail(
+                employment.email,
+                employment.fullName,
+                course.title,
+                new Date(courseAssignment.dueDate),
+                loginLink
+              );
+              results.sent15Day++;
+            }
+
+            // Send 24-hour final reminder (when 29 days overdue, 24 hours before 30-day deadline)
+            if (hoursUntilFinal <= 24 && hoursUntilFinal > 0) {
+              await this.emailService.send24HourFinalReminderEmail(
+                employment.email,
+                employment.fullName,
+                course.title,
+                finalDeadline,
+                loginLink
+              );
+              results.sent24Hour++;
+            }
+          }
+        } catch (error) {
+          results.errors.push({
+            email: employment.email,
+            error: error.message,
+          });
+        }
+      }
+
+      return {
+        message: 'Overdue reminder emails processed',
+        results,
+      };
+    } catch (error) {
+      throw new Error(`Failed to send overdue reminder emails: ${error.message}`);
+    }
+  }
 }
 

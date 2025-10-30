@@ -296,5 +296,19 @@ export class EmploymentController {
   async deleteEmployment(@Param('id') id: string) {
     return await this.employmentService.deleteEmployment(id);
   }
+
+  @Post('send-reminder-emails')
+  @ApiOperation({ summary: 'Send reminder emails to inactive accounts (7-day and 15-day reminders)' })
+  @ApiResponse({ status: 200, description: 'Reminder emails sent successfully' })
+  async sendReminderEmails() {
+    return await this.employmentService.sendReminderEmailsToInactiveAccounts();
+  }
+
+  @Post('send-overdue-reminder-emails')
+  @ApiOperation({ summary: 'Send reminder emails for overdue courses (7-day, 15-day, 24-hour final)' })
+  @ApiResponse({ status: 200, description: 'Overdue reminder emails sent successfully' })
+  async sendOverdueReminderEmails() {
+    return await this.employmentService.sendOverdueReminderEmails();
+  }
 }
 

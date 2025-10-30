@@ -37,4 +37,22 @@ export class ServerUtils {
     const baseUrl = this.getServerBaseUrl();
     return `${baseUrl}/auth/api/v1/courses/thumbnails/${filename}`;
   }
+
+  // Get frontend URL from environment or server URL
+  static getFrontendUrl(): string {
+    // If FRONTEND_URL is set in environment, use it
+    if (process.env.FRONTEND_URL) {
+      return process.env.FRONTEND_URL;
+    }
+
+    // Try to get from request-based host
+    if (this.requestHost) {
+      return this.requestHost.replace('/auth', '');
+    }
+
+    // Fallback: try to get from server or use default
+    const defaultUrl = 'http://195.35.21.108:5175';
+    console.log('Using default frontend URL:', defaultUrl);
+    return defaultUrl;
+  }
 }

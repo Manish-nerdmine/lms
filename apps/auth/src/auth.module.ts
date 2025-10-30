@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AUTH_SERVICE, DatabaseModule, HealthModule, LoggerModule, UserPasscodeDocument, UserPasscodeSchema } from '@app/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -23,9 +24,11 @@ import { UserProgressModule } from './user-progress/user-progress.module';
 import { EmploymentModule } from './employment/employment.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { SuperAdminModule } from './super-admin/super-admin.module';
+import { ScheduledTasksModule } from './scheduled-tasks/scheduled-tasks.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     DatabaseModule,
     DatabaseModule.forFeature([{ name: UserPasscodeDocument.name, schema: UserPasscodeSchema }]),
     LoggerModule,
@@ -64,6 +67,7 @@ import { SuperAdminModule } from './super-admin/super-admin.module';
     EmploymentModule,
     DashboardModule,
     SuperAdminModule,
+    ScheduledTasksModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, PasscodeService, PasscodeRepository, ClientsModule],
