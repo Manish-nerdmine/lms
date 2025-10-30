@@ -948,6 +948,14 @@ export class EmploymentService {
     }
   }
 
+  async checkEmploymentStatus(email: string) {
+    const employment = await this.employmentRepository.findOneByEmail(email);
+    if (!employment) {
+      throw new NotFoundException('Employment record not found');
+    }
+    return employment;
+  }
+
 
   
 }

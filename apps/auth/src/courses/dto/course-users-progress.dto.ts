@@ -10,6 +10,9 @@ export class UserProgressDto {
   @ApiProperty({ description: 'Progress percentage (0-100)' })
   progressPercentage: number;
 
+  @ApiProperty({ description: 'Is course completed' })
+  isCourseCompleted: boolean;
+
   @ApiProperty({ description: 'Total number of completed items' })
   totalCompletedItems: number;
 }

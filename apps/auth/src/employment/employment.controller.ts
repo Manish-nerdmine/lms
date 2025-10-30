@@ -207,6 +207,14 @@ export class EmploymentController {
     );
   }
 
+  @Get('check-status/:email')
+  @ApiOperation({ summary: 'Check employment status by email' })
+  @ApiResponse({ status: 200, description: 'Employment status found' })
+  @ApiResponse({ status: 404, description: 'Employment record not found' })
+  async checkEmploymentStatus(@Param('email') email: string) {
+    return await this.employmentService.checkEmploymentStatus(email);
+  }
+
   @Get(':id/progress/:courseId')
   @ApiOperation({ summary: 'Get employee progress for a specific course' })
   @ApiResponse({ 

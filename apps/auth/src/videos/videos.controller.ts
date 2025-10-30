@@ -7,7 +7,6 @@ import {
   Delete,
   UseInterceptors,
   UploadedFile,
-  UseGuards,
   Res,
   StreamableFile,
   Put,
@@ -17,7 +16,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { VideosService } from './videos.service';
 import { CreateVideoDto } from './dto/create-video.dto';
-import { PasscodeAuthGuard } from '@app/common/auth/passcode-auth.guard';
 import { ApiTags, ApiConsumes, ApiBody } from '@nestjs/swagger';
 
 const ALLOWED_VIDEO_FORMATS = [
@@ -32,7 +30,6 @@ const ALLOWED_VIDEO_FORMATS = [
 
 @ApiTags('videos')
 @Controller('courses/:courseId/videos')
-//@UseGuards(PasscodeAuthGuard)
 export class VideosController {
   constructor(private readonly videosService: VideosService) {}
 

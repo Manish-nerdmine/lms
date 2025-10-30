@@ -50,6 +50,9 @@ export class Video extends Document {
 
   @Prop({ default: 0 })
   order: number;
+
+  @Prop({ default: false })
+  isSuperAdminVideo?: boolean;
 }
 
 @Schema({ timestamps: true })

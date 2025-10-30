@@ -1,7 +1,7 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Video } from '@app/common/models/lms.schema';
+import { Video, Course } from '@app/common/models/lms.schema';
 import { CreateVideoDto } from './dto/create-video.dto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -26,6 +26,7 @@ export class VideosService {
 
   constructor(
     @InjectModel(Video.name) private readonly videoModel: Model<Video>,
+    @InjectModel(Course.name) private readonly courseModel: Model<Course>,
   ) {
     // Ensure upload directory exists
     if (!fs.existsSync(this.uploadDir)) {
@@ -89,6 +90,10 @@ export class VideosService {
       throw new Error('Either video file or videoUrl must be provided');
     }
 
+    // Check if the course is a super admin course
+    const course = await this.courseModel.findById(courseId).exec();
+    const isSuperAdminVideo = course?.isSuperAdminCourse === true;
+
     // Create video document
     const video = new this.videoModel({
       ...createVideoDto,
@@ -96,6 +101,7 @@ export class VideosService {
       duration,
       courseId,
       order: await this.getNextOrder(courseId),
+      isSuperAdminVideo,
     });
 
     const savedVideo = await video.save();
@@ -149,6 +155,11 @@ export class VideosService {
 
   async remove(id: string): Promise<void> {
     const video = await this.findOne(id);
+    
+    // Check if video is a super admin video - prevent deletion
+    if (video.isSuperAdminVideo) {
+      throw new ForbiddenException('Cannot delete videos created by super admin. Only super admins can delete these videos.');
+    }
     
     // Delete file from disk
     const filename = path.basename(video.videoUrl);
@@ -205,6 +216,12 @@ export class VideosService {
 
   async updateOrder(videoId: string, newOrder: number): Promise<Video> {
     const video = await this.findOne(videoId);
+    
+    // Check if video is a super admin video - prevent reordering
+    if (video.isSuperAdminVideo) {
+      throw new ForbiddenException('Cannot reorder videos created by super admin. Only super admins can reorder these videos.');
+    }
+    
     const oldOrder = video.order;
 
     // Update the order of the target video
@@ -246,6 +263,11 @@ export class VideosService {
     const video = await this.findOne(videoId);
     if (!video) {
       throw new Error('Video not found');
+    }
+
+    // Check if video is a super admin video - prevent editing
+    if (video.isSuperAdminVideo) {
+      throw new ForbiddenException('Cannot edit videos created by super admin. Only super admins can edit these videos.');
     }
 
     return await this.videoModel.findOneAndUpdate({ _id: videoId }, updateData, { new: true }).exec();

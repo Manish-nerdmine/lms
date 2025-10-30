@@ -229,29 +229,42 @@ export class CoursesService {
       groupId: { $in: groupIds }
     }).exec();
 
-    // Get all user progress records for this course
+    // Get all user progress records for this course (both by userId and employmentId)
     const userProgresses = await this.userProgressModel
       .find({ courseId })
       .exec();
 
-    // Create a map of user progress by userId
-    const progressMap = new Map();
+    // Create a map of user progress by userId and employmentId
+    const progressMapByUserId = new Map();
+    const progressMapByEmploymentId = new Map();
+    
     userProgresses.forEach(progress => {
-      progressMap.set(progress.userId.toString(), {
+      const progressData = {
         completedVideos: progress.completedVideos,
         completedQuizzes: progress.completedQuizzes,
         progressPercentage: progress.progressPercentage,
+        isCourseCompleted: progress.isCourseCompleted,
         totalCompletedItems: progress.completedVideos.length + progress.completedQuizzes.length,
         lastUpdated: (progress as any).updatedAt,
-      });
+      };
+      
+      if (progress.userId) {
+        progressMapByUserId.set(progress.userId.toString(), progressData);
+      }
+      if (progress.employmentId) {
+        progressMapByEmploymentId.set(progress.employmentId.toString(), progressData);
+      }
     });
 
     // Transform the data to include employee details and progress
     const employeesWithProgress = employeesInGroups.map(employee => {
-      const progress = progressMap.get(employee.userId.toString()) || {
+      // Try to find progress by employmentId first, then userId
+      const progress = progressMapByEmploymentId.get(employee._id.toString()) || 
+                       progressMapByUserId.get(employee.userId.toString()) || {
         completedVideos: [],
         completedQuizzes: [],
         progressPercentage: 0,
+        isCourseCompleted: false,
         totalCompletedItems: 0,
         lastUpdated: employee.updatedAt,
       };
@@ -267,6 +280,7 @@ export class CoursesService {
           completedVideos: progress.completedVideos,
           completedQuizzes: progress.completedQuizzes,
           progressPercentage: progress.progressPercentage,
+          isCourseCompleted: progress.isCourseCompleted,
           totalCompletedItems: progress.totalCompletedItems,
         },
         lastUpdated: progress.lastUpdated,

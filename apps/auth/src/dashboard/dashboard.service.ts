@@ -29,7 +29,6 @@ export class DashboardService {
     // Active Learners (employees with isActive: true)
     const currentActiveEmployees = await this.employmentModel.countDocuments({
       ...matchQuery,
-      isActive: true,
       lastLoggedIn: { $gte: firstDayCurrentMonth }
     });
 
