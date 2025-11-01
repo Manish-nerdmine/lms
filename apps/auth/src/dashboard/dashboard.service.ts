@@ -49,9 +49,9 @@ export class DashboardService {
     });
 
     const lastMonthCourses = await this.courseModel.countDocuments({
-      ...matchQuery,
-      isActive: true,
-      createdAt: { $lt: firstDayCurrentMonth }
+      userId: new Types.ObjectId(userId),
+      isSuperAdminCourse: true,
+      
     });
 
     const totalCoursesChange = lastMonthCourses > 0
@@ -112,7 +112,7 @@ export class DashboardService {
       activeLearners: activeLearners,
       activeLearnersChange: parseFloat(activeLearnersChange.toFixed(1)),
       totalCourses: currentCourses,
-      totalCoursesChange: parseFloat(totalCoursesChange.toFixed(1)),
+      totalCoursesChange: parseFloat(lastMonthCourses.toFixed(1)),
       avgCompletionRate,
       avgCompletionRateChange: parseFloat(avgCompletionRateChange.toFixed(1)),
       avgLearnerProgress,

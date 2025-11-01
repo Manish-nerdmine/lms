@@ -73,9 +73,13 @@ export class UserProgressService {
   }
 
   private async updateProgressPercentage(progress: UserProgress): Promise<void> {
+    console.log('progress', progress);
     const totalVideos = progress.completedVideos.length;
     const totalQuizzes = progress.completedQuizzes.length;
     const totalItems = totalVideos + totalQuizzes;
+    console.log('totalItems', totalItems);
+    console.log('totalVideos', totalVideos);
+    console.log('totalQuizzes', totalQuizzes);
 
     if (totalItems > 0) {
       progress.progressPercentage = (totalItems / (totalVideos + totalQuizzes)) * 100;

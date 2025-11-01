@@ -726,11 +726,14 @@ export class EmploymentService {
         throw new NotFoundException('Course not found');
       }
 
-      // Verify video belongs to course
-      const videoBelongsToCourse = course.videos.some(v => v.toString() === videoId);
-      if (!videoBelongsToCourse) {
-        throw new BadRequestException('Video does not belong to this course');
-      }
+      console.log('course', course);
+
+
+      // // Verify video belongs to course
+      // const videoBelongsToCourse = course.videos.some(v => v.toString() === videoId);
+      // if (!videoBelongsToCourse) {
+      //   throw new BadRequestException('Video does not belong to this course');
+      // }
 
       // Find or create progress record
       let progress = await this.userProgressModel.findOne({
@@ -936,9 +939,14 @@ export class EmploymentService {
    * @param course - Course document
    */
   private async updateProgressPercentage(progress: any, course: any): Promise<void> {
+    console.log('progress', progress);
+    console.log('course', course);
     const totalVideos = course.videos.length;
     const totalQuizzes = course.quizzes.length;
     const totalItems = totalVideos + totalQuizzes;
+    console.log('totalItems', totalItems);
+    console.log('totalVideos', totalVideos);
+    console.log('totalQuizzes', totalQuizzes);
 
     if (totalItems === 0) {
       progress.progressPercentage = 0;
