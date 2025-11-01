@@ -19,7 +19,13 @@ export class DashboardService {
    * Get dashboard statistics
    */
   async getDashboardStats(userId?: string) {
+    // Employment/User scoped match
     const matchQuery = userId ? { userId: new Types.ObjectId(userId) } : {};
+
+    // Course scoped match: include super admin courses for everyone
+    const courseMatchQuery: any = userId
+      ? { $or: [ { userId: new Types.ObjectId(userId) }, { isSuperAdminCourse: true } ] }
+      : {};
 
     // Get current month and previous month dates
     const now = new Date();
@@ -29,7 +35,7 @@ export class DashboardService {
     // Active Learners (employees with isActive: true)
     const currentActiveEmployees = await this.employmentModel.countDocuments({
       ...matchQuery,
-      lastLoggedIn: { $gte: firstDayCurrentMonth }
+      //lastLoggedIn: { $gte: firstDayCurrentMonth }
     });
 
     const lastMonthActiveEmployees = await this.employmentModel.countDocuments({
@@ -44,15 +50,14 @@ export class DashboardService {
 
     // Total Courses
     const currentCourses = await this.courseModel.countDocuments({
-      ...matchQuery,
-      isActive: true
+      ...courseMatchQuery,
     });
 
     const lastMonthCourses = await this.courseModel.countDocuments({
-      userId: new Types.ObjectId(userId),
-      isSuperAdminCourse: true,
-      
+      ...courseMatchQuery,
+      createdAt: { $lt: firstDayCurrentMonth }
     });
+    console.log('lastMonthCourses', lastMonthCourses);
 
     const totalCoursesChange = lastMonthCourses > 0
       ? ((currentCourses - lastMonthCourses) / lastMonthCourses) * 100
@@ -375,11 +380,23 @@ export class DashboardService {
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - months + 1);
 
+    // If a userId is provided, resolve the set of employmentIds for that user
+    let employmentIds: Types.ObjectId[] | undefined;
+    if (userId) {
+      const emps = await this.employmentModel
+        .find({ userId: new Types.ObjectId(userId) })
+        .select('_id')
+        .lean();
+      employmentIds = emps.map((e: any) => new Types.ObjectId(e._id));
+    }
+
     const pipeline: any[] = [
       {
         $match: {
           updatedAt: { $gte: startDate, $lte: endDate },
-          ...(userId ? { userId: new Types.ObjectId(userId) } : {}),
+          ...(employmentIds && employmentIds.length > 0
+            ? { employmentId: { $in: employmentIds } }
+            : {}),
         },
       },
       {
@@ -406,7 +423,13 @@ export class DashboardService {
   async getCompletionDistribution(userId?: string) {
     const match: any = {};
     if (userId) {
-      match.userId = new Types.ObjectId(userId);
+      const emps = await this.employmentModel
+        .find({ userId: new Types.ObjectId(userId) })
+        .select('_id')
+        .lean();
+      const employmentIds = emps.map((e: any) => new Types.ObjectId(e._id));
+      console.log('employmentIds', employmentIds);
+      match.employmentId = { $in: employmentIds };
     }
 
     const items = await this.userProgressModel.find(match).select('progressPercentage').lean();

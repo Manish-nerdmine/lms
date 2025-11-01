@@ -87,7 +87,9 @@ export class CoursesService {
 
   async findAll(userId?: string): Promise<any[]> {
     // Include super admin courses for all users
-    const filter = userId ? { $or: [{ userId }, { isSuperAdminCourse: true }] } : {};
+    const filter = userId
+      ? { $or: [ { userId: new Types.ObjectId(userId) }, { isSuperAdminCourse: true } ] }
+      : {};
     const courses = await this.courseModel.find(filter).populate('videos').populate('quizzes').populate('userId', 'fullName email').exec();
     
     // Add video count and fix thumbnail URLs for each course
