@@ -91,6 +91,10 @@ export class DashboardService {
       }
     ]);
 
+    const activeLearners = await this.employmentModel.countDocuments({
+      userId: new Types.ObjectId(userId),
+    });
+
     const lastMonthAvgCompletion = lastMonthCompletion.length > 0
       ? Math.round(lastMonthCompletion[0].avgCompletion)
       : avgCompletionRate;
@@ -105,7 +109,7 @@ export class DashboardService {
     const avgLearnerProgressChange = avgCompletionRateChange;
 
     return {
-      activeLearners: currentActiveEmployees,
+      activeLearners: activeLearners,
       activeLearnersChange: parseFloat(activeLearnersChange.toFixed(1)),
       totalCourses: currentCourses,
       totalCoursesChange: parseFloat(totalCoursesChange.toFixed(1)),
@@ -361,6 +365,68 @@ export class DashboardService {
         createdAt: createdAt
       };
     });
+  }
+
+  /**
+   * Average Learner Progress Trend (by month)
+   */
+  async getAverageLearnerProgressTrend(userId?: string, months: number = 6) {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - months + 1);
+
+    const pipeline: any[] = [
+      {
+        $match: {
+          updatedAt: { $gte: startDate, $lte: endDate },
+          ...(userId ? { userId: new Types.ObjectId(userId) } : {}),
+        },
+      },
+      {
+        $group: {
+          _id: { year: { $year: '$updatedAt' }, month: { $month: '$updatedAt' } },
+          avgProgress: { $avg: '$progressPercentage' },
+        },
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } },
+    ];
+
+    const data = await this.userProgressModel.aggregate(pipeline);
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return data.map((d) => ({
+      month: monthNames[d._id.month - 1],
+      value: Math.round(d.avgProgress),
+    }));
+  }
+
+  /**
+   * Completion Distribution buckets
+   */
+  async getCompletionDistribution(userId?: string) {
+    const match: any = {};
+    if (userId) {
+      match.userId = new Types.ObjectId(userId);
+    }
+
+    const items = await this.userProgressModel.find(match).select('progressPercentage').lean();
+
+    const buckets = { '0-25%': 0, '25-50%': 0, '50-75%': 0, '75-100%': 0 } as Record<string, number>;
+
+    for (const it of items) {
+      const p = it.progressPercentage ?? 0;
+      if (p < 25) buckets['0-25%']++;
+      else if (p < 50) buckets['25-50%']++;
+      else if (p < 75) buckets['50-75%']++;
+      else buckets['75-100%']++;
+    }
+
+    return [
+      { label: '0-25%', value: buckets['0-25%'] },
+      { label: '25-50%', value: buckets['25-50%'] },
+      { label: '50-75%', value: buckets['50-75%'] },
+      { label: '75-100%', value: buckets['75-100%'] },
+    ];
   }
 
   /**

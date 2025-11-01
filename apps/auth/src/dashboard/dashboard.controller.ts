@@ -142,6 +142,52 @@ export class DashboardController {
     return await this.dashboardService.getNewCourses(userId, limit || 10);
   }
 
+  @Get('avg-progress-trend')
+  @ApiOperation({ summary: 'Average learner progress trend (monthly)' })
+  @ApiQuery({ name: 'userId', required: false, description: 'Filter by user ID' })
+  @ApiQuery({ name: 'months', required: false, description: 'Number of months (default: 6)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Average progress trend',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          month: { type: 'string', example: 'Jun' },
+          value: { type: 'number', example: 70 },
+        },
+      },
+    },
+  })
+  async getAvgProgressTrend(
+    @Query('userId') userId?: string,
+    @Query('months') months?: number,
+  ) {
+    return await this.dashboardService.getAverageLearnerProgressTrend(userId, months || 6);
+  }
+
+  @Get('completion-distribution')
+  @ApiOperation({ summary: 'Completion distribution buckets' })
+  @ApiQuery({ name: 'userId', required: false, description: 'Filter by user ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Completion distribution',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          label: { type: 'string', example: '75-100%' },
+          value: { type: 'number', example: 450 },
+        },
+      },
+    },
+  })
+  async getCompletionDistribution(@Query('userId') userId?: string) {
+    return await this.dashboardService.getCompletionDistribution(userId);
+  }
+
   @Get('complete')
   @ApiOperation({ summary: 'Get complete dashboard data (all metrics in one call)' })
   @ApiQuery({ name: 'userId', required: false, description: 'Filter by user ID' })

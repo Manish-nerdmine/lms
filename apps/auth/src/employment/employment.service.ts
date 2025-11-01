@@ -326,7 +326,7 @@ export class EmploymentService {
         try {
           // Validate required fields
           if (!row['fullName'] || !row['email'] || !row['role']) {
-            throw new BadRequestException('Missing required fields: fullName, email, or role');
+            throw new BadRequestException('File format is not valid');
           }
 
           // Check if employment already exists
@@ -377,7 +377,11 @@ export class EmploymentService {
         results,
       };
     } catch (error) {
-      throw new BadRequestException(`Failed to process Excel file: ${error.message}`);
+      console.log('error', error);
+      return {
+        message: 'File format is not valid',
+        error: error.message,
+      }
     }
   }
 
