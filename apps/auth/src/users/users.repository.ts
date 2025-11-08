@@ -39,6 +39,10 @@ export class UsersRepository extends AbstractRepository<UserDocument> {
     return this.model.findById(id).exec();
   }
 
+  async findByIdWithPassword(id: string) {
+    return this.model.findById(id).select('+password').exec();
+  }
+
   async findByIdAndUpdate(id: string, update: any, options?: any) {
     // Convert groupId string to ObjectId if provided
     if (update.groupId) {

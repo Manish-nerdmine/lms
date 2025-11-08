@@ -8,6 +8,7 @@ import { LoginAuthDto } from './dto/loginAuth.dto';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
 import { UsersService } from './users.service';
 import { GroupsService } from '../groups/groups.service';
 
@@ -118,6 +119,17 @@ export class UsersController {
     @Body() updateUserDto: UpdateUserDto,
   ) {
     return this.usersService.updateUser(id, updateUserDto);
+  }
+
+  @Put(':id/password')
+  @ApiOperation({ summary: 'Update user password' })
+  @ApiResponse({ status: 200, description: 'Password updated successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updatePassword(
+    @Param('id') id: string,
+    @Body() updatePasswordDto: UpdateUserPasswordDto,
+  ) {
+    return this.usersService.updateUserPassword(id, updatePasswordDto);
   }
 
   @Delete(':id')

@@ -3,11 +3,12 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
 import { GetUserDto } from './dto/get-user.dto';
 import { LoginAuthDto } from './dto/loginAuth.dto';
 import { UsersRepository } from './users.repository';
 import { PasscodeService } from '../passcode/passcode.service';
-import { getHashKeys, comparePassword } from '../utils/common.utils'
+import { getHashKeys, comparePassword, hashPassword } from '../utils/common.utils';
 import * as XLSX from 'xlsx';
 import { Response } from 'express';
 import { Group } from '@app/common/models/group.schema';
@@ -137,6 +138,42 @@ export class UsersService {
       };
     } catch (error) {
       console.log(error);
+    }
+  }
+
+  async updateUserPassword(id: string, updatePasswordDto: UpdateUserPasswordDto) {
+    try {
+      const user = await this.usersRepository.findByIdWithPassword(id);
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      if (!user.password) {
+        throw new UnprocessableEntityException('No password set for this user. Please contact administrator.');
+      }
+
+      const isCurrentValid = await comparePassword(updatePasswordDto.currentPassword, user.password);
+      if (!isCurrentValid) {
+        throw new UnprocessableEntityException('Current password is incorrect');
+      }
+
+      const isSamePassword = await comparePassword(updatePasswordDto.newPassword, user.password);
+      if (isSamePassword) {
+        throw new UnprocessableEntityException('New password must be different from current password');
+      }
+
+      const hashedPassword = await hashPassword(updatePasswordDto.newPassword);
+      await this.usersRepository.findByIdAndUpdate(id, { password: hashedPassword });
+
+      return {
+        message: 'Password updated successfully',
+        success: true,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof UnprocessableEntityException) {
+        throw error;
+      }
+      throw new UnprocessableEntityException(error.message);
     }
   }
 
@@ -491,4 +528,5 @@ export class UsersService {
       contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     };
   }
+
 }

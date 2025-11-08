@@ -84,4 +84,8 @@ export class UpdateUserDto {
   @IsOptional()
   @IsMongoId()
   departmentId?: string;
+
+  @IsOptional()
+  @IsString()
+  password?: string;
 }
