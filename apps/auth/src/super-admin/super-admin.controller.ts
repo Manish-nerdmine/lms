@@ -96,9 +96,7 @@ export class SuperAdminController {
     return await this.superAdminService.removeSuperAdmin(userId);
   }
 
-  @Get('dashboard/stats')
-  @UseGuards(PasscodeAuthGuard, SuperAdminGuard)
-  @ApiBearerAuth()
+  @Get('dashboard/stats/:userId')
   @ApiOperation({ summary: 'Get dashboard statistics (Super admin only)' })
   @ApiResponse({ 
     status: 200, 
@@ -113,8 +111,8 @@ export class SuperAdminController {
     }
   })
   @ApiResponse({ status: 403, description: 'Access denied. Super admin privileges required.' })
-  async getDashboardStats() {
-    return await this.superAdminService.getDashboardStats();
+  async getDashboardStats(@Param('userId') userId: string) {
+    return await this.superAdminService.getDashboardStats(userId);
   }
 
   @Get('user/:userId/export')

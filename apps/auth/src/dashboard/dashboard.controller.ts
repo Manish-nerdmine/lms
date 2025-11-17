@@ -1,5 +1,5 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 
 @ApiTags('Dashboard')
@@ -9,7 +9,7 @@ export class DashboardController {
 
   @Get('stats/:userId')
   @ApiOperation({ summary: 'Get dashboard statistics (Active Learners, Courses, Completion Rate, Progress)' })
-  @ApiParam({ name: 'userId', required: false, description: 'Filter by user ID' })
+  @ApiQuery({ name: 'userId', required: false, description: 'Filter by user ID' })
   @ApiResponse({
     status: 200,
     description: 'Dashboard statistics retrieved successfully',
@@ -27,7 +27,7 @@ export class DashboardController {
       }
     }
   })
-  async getDashboardStats(@Param('userId') userId: string) {
+  async getDashboardStats(@Query('userId') userId?: string) {
     return await this.dashboardService.getDashboardStats(userId);
   }
 

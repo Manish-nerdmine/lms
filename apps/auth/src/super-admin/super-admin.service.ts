@@ -122,7 +122,7 @@ export class SuperAdminService {
   /**
    * Get dashboard statistics
    */
-  async getDashboardStats() {
+  async getDashboardStats(userId: string) {
     try {
       // Get total users count
       const totalUsers = await this.userModel.countDocuments({
