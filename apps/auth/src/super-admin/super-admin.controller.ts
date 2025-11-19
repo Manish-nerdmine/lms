@@ -30,7 +30,7 @@ export class SuperAdminController {
   }
 
   @Get()
-  @UseGuards(PasscodeAuthGuard, SuperAdminGuard)
+ 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all super admins (Super admin only)' })
   @ApiResponse({ 
@@ -50,7 +50,7 @@ export class SuperAdminController {
   }
 
   @Patch('toggle/:userId')
-  @UseGuards(PasscodeAuthGuard, SuperAdminGuard)
+ 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Toggle super admin status for a user (Super admin only)' })
   @ApiResponse({ 
@@ -75,7 +75,7 @@ export class SuperAdminController {
   }
 
   @Delete(':userId')
-  @UseGuards(PasscodeAuthGuard, SuperAdminGuard)
+ 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Remove super admin status from a user (Super admin only)' })
   @ApiResponse({ 
@@ -116,7 +116,7 @@ export class SuperAdminController {
   }
 
   @Get('user/:userId/export')
-  @UseGuards(PasscodeAuthGuard, SuperAdminGuard)
+ 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Export user complete information to Excel (Super admin only)' })
   @ApiResponse({ 
@@ -142,7 +142,7 @@ export class SuperAdminController {
   }
 
   @Get('user/:userId')
-  @UseGuards(PasscodeAuthGuard, SuperAdminGuard)
+ 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get complete user information (Super admin only)' })
   @ApiResponse({ 
