@@ -37,13 +37,31 @@ export class Video extends Document {
   title: string;
 
   @Prop()
+  subtitle: string;
+
+  @Prop()
   description: string;
 
   @Prop({ required: true })
   videoUrl: string;
 
   @Prop()
-  duration: number;
+  thumbnail: string;
+
+  @Prop()
+  duration: number; // in seconds
+
+  @Prop()
+  fileSize: number; // in bytes
+
+  @Prop()
+  format: string; // e.g., 'mp4', 'webm', 'avi'
+
+  @Prop()
+  resolution: string; // e.g., '1920x1080', '1280x720'
+
+  @Prop()
+  quality: string; // e.g., 'HD', 'Full HD', '4K', 'SD'
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Course', required: true })
   courseId: Course;
@@ -51,8 +69,127 @@ export class Video extends Document {
   @Prop({ default: 0 })
   order: number;
 
+  @Prop({ type: [String], default: [] })
+  tags: string[];
+
+  @Prop({
+    type: String,
+    enum: ['draft', 'processing', 'ready', 'failed', 'archived'],
+    default: 'draft'
+  })
+  status: string;
+
+  @Prop()
+  transcript: string; // Full text transcript of the video
+
+  @Prop()
+  captionsUrl: string; // URL to VTT or SRT caption file
+
+  @Prop({ default: false })
+  hasCaption: boolean;
+
+  @Prop({ default: false })
+  isPreviewAvailable: boolean;
+
+  @Prop()
+  previewUrl: string; // Short preview/trailer URL
+
+  @Prop({ default: true })
+  isPublished: boolean;
+
+  @Prop()
+  publishedAt: Date;
+
+  @Prop()
+  uploadedBy: string; // User ID who uploaded the video
+
+  @Prop({ default: 0 })
+  viewCount: number;
+
+  @Prop({ default: 0 })
+  completionCount: number;
+
+  @Prop()
+  language: string; // e.g., 'en', 'es', 'fr'
+
+  @Prop({ default: false })
+  isDownloadable: boolean;
+
   @Prop({ default: false })
   isSuperAdminVideo?: boolean;
+
+  @Prop({ type: Object })
+  metadata: Record<string, any>; // Additional custom metadata
+
+  // UI Section Fields
+  @Prop({
+    type: [{
+      icon: { type: String },
+      title: { type: String },
+      description: { type: String },
+      order: { type: Number }
+    }],
+    default: []
+  })
+  journeySteps: Array<{
+    icon: string;
+    title: string;
+    description: string;
+    order: number;
+  }>;
+
+  @Prop({
+    type: [{
+      title: { type: String },
+      content: { type: String },
+      order: { type: Number }
+    }],
+    default: []
+  })
+  infoSections: Array<{
+    title: string;
+    content: string;
+    order: number;
+  }>;
+
+  @Prop({
+    type: [{
+      title: { type: String },
+      content: { type: String },
+      isExpanded: { type: Boolean, default: false },
+      order: { type: Number }
+    }],
+    default: []
+  })
+  accordions: Array<{
+    title: string;
+    content: string;
+    isExpanded: boolean;
+    order: number;
+  }>;
+
+  @Prop({
+    type: [{
+      question: { type: String },
+      answer: { type: String },
+      order: { type: Number }
+    }],
+    default: []
+  })
+  faqs: Array<{
+    question: string;
+    answer: string;
+    order: number;
+  }>;
+
+  @Prop()
+  moduleUrl: string;
+
+  @Prop()
+  overview: string; // Rich text overview/introduction
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 @Schema({ timestamps: true })

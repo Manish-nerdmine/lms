@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Video, Course } from '@app/common/models/lms.schema';
 import { CreateVideoDto } from './dto/create-video.dto';
+import { UpdateVideoDto } from './dto/update-video.dto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -62,7 +63,7 @@ export class VideosService {
 
       filename = `${uuidv4()}-${file.originalname}`;
       const filepath = path.join(this.uploadDir, filename);
-      
+
       // Generate full URL for the video using server host
       videoUrl = ServerUtils.getVideoStreamUrl(courseId, filename);
       console.log('Video URL:', videoUrl);
@@ -105,7 +106,7 @@ export class VideosService {
     });
 
     const savedVideo = await video.save();
-    
+
     // Return enhanced response with accessible URL
     return {
       ...savedVideo.toObject(),
@@ -125,7 +126,7 @@ export class VideosService {
 
   async findAll(courseId: string): Promise<any[]> {
     const videos = await this.videoModel.find({ courseId }).sort({ order: 1 }).exec();
-    
+
     // Enhance videos with streaming URLs
     return videos.map(video => {
       const videoObj = video.toObject();
@@ -142,11 +143,11 @@ export class VideosService {
     if (!video) {
       throw new NotFoundException('Video not found');
     }
-    
+
     // Enhance video with streaming URL
     const videoObj = video.toObject();
     const filename = path.basename(videoObj.videoUrl);
-    
+
     return {
       ...videoObj,
       streamingUrl: ServerUtils.getVideoStreamUrl(videoObj.courseId.toString(), filename),
@@ -155,12 +156,12 @@ export class VideosService {
 
   async remove(id: string): Promise<void> {
     const video = await this.findOne(id);
-    
+
     // Check if video is a super admin video - prevent deletion
     if (video.isSuperAdminVideo) {
       throw new ForbiddenException('Cannot delete videos created by super admin. Only super admins can delete these videos.');
     }
-    
+
     // Delete file from disk
     const filename = path.basename(video.videoUrl);
     const filepath = path.join(this.uploadDir, filename);
@@ -174,17 +175,17 @@ export class VideosService {
 
   async getVideoStream(filename: string): Promise<{ stream: fs.ReadStream; mimeType: string }> {
     const filepath = path.join(this.uploadDir, filename);
-    
+
     if (!fs.existsSync(filepath)) {
       throw new NotFoundException('Video file not found');
     }
 
     const stream = fs.createReadStream(filepath);
-    
+
     // Determine MIME type based on file extension
     const extension = path.extname(filename).toLowerCase();
     let mimeType = 'video/mp4'; // default
-    
+
     switch (extension) {
       case '.mp4':
         mimeType = 'video/mp4';
@@ -216,12 +217,12 @@ export class VideosService {
 
   async updateOrder(videoId: string, newOrder: number): Promise<Video> {
     const video = await this.findOne(videoId);
-    
+
     // Check if video is a super admin video - prevent reordering
     if (video.isSuperAdminVideo) {
       throw new ForbiddenException('Cannot reorder videos created by super admin. Only super admins can reorder these videos.');
     }
-    
+
     const oldOrder = video.order;
 
     // Update the order of the target video
@@ -257,8 +258,8 @@ export class VideosService {
   }
 
   async updateVideoDetails(
-    videoId: string, 
-    updateData: { title?: string; description?: string }
+    videoId: string,
+    updateData: UpdateVideoDto
   ): Promise<Video> {
     const video = await this.findOne(videoId);
     if (!video) {

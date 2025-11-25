@@ -16,6 +16,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { VideosService } from './videos.service';
 import { CreateVideoDto } from './dto/create-video.dto';
+import { UpdateVideoDto } from './dto/update-video.dto';
 import { ApiTags, ApiConsumes, ApiBody } from '@nestjs/swagger';
 
 const ALLOWED_VIDEO_FORMATS = [
@@ -31,7 +32,7 @@ const ALLOWED_VIDEO_FORMATS = [
 @ApiTags('videos')
 @Controller('courses/:courseId/videos')
 export class VideosController {
-  constructor(private readonly videosService: VideosService) {}
+  constructor(private readonly videosService: VideosService) { }
 
   @Post()
   @ApiConsumes('multipart/form-data')
@@ -42,11 +43,15 @@ export class VideosController {
         video: {
           type: 'string',
           format: 'binary',
-          description: 'Video file (MP4, AVI, MOV, WMV, MKV, WebM, or FLV) or PPT file (PPT, PPTX)',
+          description: 'Video file (MP4, AVI, MOV, WMV, MKV, WebM, or FLV)',
         },
         title: {
           type: 'string',
           description: 'Title of the video',
+        },
+        subtitle: {
+          type: 'string',
+          description: 'Subtitle of the video',
         },
         description: {
           type: 'string',
@@ -55,6 +60,77 @@ export class VideosController {
         videoUrl: {
           type: 'string',
           description: 'URL of the video (if not uploading a file)',
+        },
+        thumbnail: {
+          type: 'string',
+          description: 'Thumbnail URL',
+        },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Tags for the video',
+        },
+        language: {
+          type: 'string',
+          description: 'Language of the video',
+        },
+        journeySteps: {
+          type: 'array',
+          description: 'Journey steps for the video',
+          items: {
+            type: 'object',
+            properties: {
+              icon: { type: 'string', description: 'Icon URL' },
+              title: { type: 'string', description: 'Step title' },
+              description: { type: 'string', description: 'Step description' },
+              order: { type: 'number', description: 'Step order' },
+            },
+          },
+        },
+        infoSections: {
+          type: 'array',
+          description: 'Info sections for the video',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', description: 'Section title' },
+              content: { type: 'string', description: 'Section content' },
+              order: { type: 'number', description: 'Section order' },
+            },
+          },
+        },
+        accordions: {
+          type: 'array',
+          description: 'Accordions for the video',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', description: 'Accordion title' },
+              content: { type: 'string', description: 'Accordion content' },
+              isExpanded: { type: 'boolean', description: 'Is expanded by default' },
+              order: { type: 'number', description: 'Accordion order' },
+            },
+          },
+        },
+        faqs: {
+          type: 'array',
+          description: 'FAQs for the video',
+          items: {
+            type: 'object',
+            properties: {
+              question: { type: 'string', description: 'FAQ question' },
+              answer: { type: 'string', description: 'FAQ answer' },
+              order: { type: 'number', description: 'FAQ order' },
+            },
+          },
+        },
+        moduleUrl: {
+          type: 'string',
+          description: 'Module URL',
+        },
+        overview: {
+          type: 'string',
+          description: 'Overview/introduction text',
         },
       },
     },
@@ -71,7 +147,7 @@ export class VideosController {
       }
 
       const result = await this.videosService.uploadVideo(file, createVideoDto, courseId);
-      
+
       return {
         success: true,
         message: 'Video uploaded successfully',
@@ -140,9 +216,74 @@ export class VideosController {
   }
 
   @Put(':id')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Title of the video' },
+        subtitle: { type: 'string', description: 'Subtitle of the video' },
+        description: { type: 'string', description: 'Description of the video' },
+        thumbnail: { type: 'string', description: 'Thumbnail URL' },
+        tags: { type: 'array', items: { type: 'string' }, description: 'Tags for the video' },
+        language: { type: 'string', description: 'Language of the video' },
+        journeySteps: {
+          type: 'array',
+          description: 'Journey steps for the video',
+          items: {
+            type: 'object',
+            properties: {
+              icon: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string' },
+              order: { type: 'number' },
+            },
+          },
+        },
+        infoSections: {
+          type: 'array',
+          description: 'Info sections for the video',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string' },
+              content: { type: 'string' },
+              order: { type: 'number' },
+            },
+          },
+        },
+        accordions: {
+          type: 'array',
+          description: 'Accordions for the video',
+          items: {
+            type: 'object',
+            properties: {
+              title: { type: 'string' },
+              content: { type: 'string' },
+              isExpanded: { type: 'boolean' },
+              order: { type: 'number' },
+            },
+          },
+        },
+        faqs: {
+          type: 'array',
+          description: 'FAQs for the video',
+          items: {
+            type: 'object',
+            properties: {
+              question: { type: 'string' },
+              answer: { type: 'string' },
+              order: { type: 'number' },
+            },
+          },
+        },
+        moduleUrl: { type: 'string', description: 'Module URL' },
+        overview: { type: 'string', description: 'Overview/introduction text' },
+      },
+    },
+  })
   async updateVideoDetails(
     @Param('id') id: string,
-    @Body() updateData: { title?: string; description?: string },
+    @Body() updateData: UpdateVideoDto,
   ) {
     return this.videosService.updateVideoDetails(id, updateData);
   }
