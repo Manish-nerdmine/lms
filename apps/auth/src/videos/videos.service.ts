@@ -273,4 +273,41 @@ export class VideosService {
 
     return await this.videoModel.findOneAndUpdate({ _id: videoId }, updateData, { new: true }).exec();
   }
+
+  async saveDraft(videoId: string, updateData: UpdateVideoDto): Promise<Video> {
+    const video = await this.findOne(videoId);
+    if (!video) {
+      throw new NotFoundException('Video not found');
+    }
+
+    // Check if video is a super admin video - prevent editing
+    if (video.isSuperAdminVideo) {
+      throw new ForbiddenException('Cannot edit videos created by super admin. Only super admins can edit these videos.');
+    }
+
+    // Set status to draft
+    const draftData = {
+      ...updateData,
+      status: 'draft',
+    };
+
+    return await this.videoModel.findOneAndUpdate({ _id: videoId }, draftData, { new: true }).exec();
+  }
+
+  async findAllDrafts(courseId: string): Promise<any[]> {
+    const videos = await this.videoModel
+      .find({ courseId, status: 'draft' })
+      .sort({ order: 1 })
+      .exec();
+
+    // Enhance videos with streaming URLs
+    return videos.map(video => {
+      const videoObj = video.toObject();
+      const filename = path.basename(videoObj.videoUrl);
+      return {
+        ...videoObj,
+        streamingUrl: ServerUtils.getVideoStreamUrl(courseId, filename),
+      };
+    });
+  }
 } 

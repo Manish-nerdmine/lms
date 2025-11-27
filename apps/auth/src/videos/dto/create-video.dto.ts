@@ -2,11 +2,28 @@ import { IsNotEmpty, IsOptional, IsString, IsArray, IsUrl, IsNumber, IsBoolean, 
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
-class JourneyStepDto {
-  @ApiProperty({ description: 'Icon URL for the journey step', required: false })
+class OverviewItemDto {
+  @ApiProperty({ description: 'Unique identifier for the overview item', required: false })
   @IsOptional()
   @IsString()
-  icon?: string;
+  id?: string;
+
+  @ApiProperty({ description: 'Title of the overview item' })
+  @IsNotEmpty()
+  @IsString()
+  title: string;
+
+  @ApiProperty({ description: 'Description of the overview item' })
+  @IsNotEmpty()
+  @IsString()
+  description: string;
+}
+
+class JourneyStepDto {
+  @ApiProperty({ description: 'Unique identifier for the journey step', required: false })
+  @IsOptional()
+  @IsString()
+  id?: string;
 
   @ApiProperty({ description: 'Title of the journey step' })
   @IsNotEmpty()
@@ -25,6 +42,11 @@ class JourneyStepDto {
 }
 
 class InfoSectionDto {
+  @ApiProperty({ description: 'Unique identifier for the info section', required: false })
+  @IsOptional()
+  @IsString()
+  id?: string;
+
   @ApiProperty({ description: 'Title of the info section' })
   @IsNotEmpty()
   @IsString()
@@ -42,6 +64,11 @@ class InfoSectionDto {
 }
 
 class AccordionDto {
+  @ApiProperty({ description: 'Unique identifier for the accordion', required: false })
+  @IsOptional()
+  @IsString()
+  id?: string;
+
   @ApiProperty({ description: 'Title of the accordion' })
   @IsNotEmpty()
   @IsString()
@@ -64,6 +91,11 @@ class AccordionDto {
 }
 
 class FaqDto {
+  @ApiProperty({ description: 'Unique identifier for the FAQ', required: false })
+  @IsOptional()
+  @IsString()
+  id?: string;
+
   @ApiProperty({ description: 'FAQ question' })
   @IsNotEmpty()
   @IsString()
@@ -150,8 +182,10 @@ export class CreateVideoDto {
   @IsUrl()
   moduleUrl?: string;
 
-  @ApiProperty({ description: 'Overview/introduction text', required: false })
+  @ApiProperty({ description: 'Overview/introduction items', required: false, type: [OverviewItemDto] })
   @IsOptional()
-  @IsString()
-  overview?: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => OverviewItemDto)
+  overview?: OverviewItemDto[];
 }

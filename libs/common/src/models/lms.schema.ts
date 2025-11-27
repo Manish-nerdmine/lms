@@ -124,7 +124,7 @@ export class Video extends Document {
   // UI Section Fields
   @Prop({
     type: [{
-      icon: { type: String },
+      id: { type: String },
       title: { type: String },
       description: { type: String },
       order: { type: Number }
@@ -132,7 +132,7 @@ export class Video extends Document {
     default: []
   })
   journeySteps: Array<{
-    icon: string;
+    id: string;
     title: string;
     description: string;
     order: number;
@@ -140,6 +140,7 @@ export class Video extends Document {
 
   @Prop({
     type: [{
+      id: { type: String },
       title: { type: String },
       content: { type: String },
       order: { type: Number }
@@ -147,6 +148,7 @@ export class Video extends Document {
     default: []
   })
   infoSections: Array<{
+    id: string;
     title: string;
     content: string;
     order: number;
@@ -154,6 +156,7 @@ export class Video extends Document {
 
   @Prop({
     type: [{
+      id: { type: String },
       title: { type: String },
       content: { type: String },
       isExpanded: { type: Boolean, default: false },
@@ -162,6 +165,7 @@ export class Video extends Document {
     default: []
   })
   accordions: Array<{
+    id: string;
     title: string;
     content: string;
     isExpanded: boolean;
@@ -170,6 +174,7 @@ export class Video extends Document {
 
   @Prop({
     type: [{
+      id: { type: String },
       question: { type: String },
       answer: { type: String },
       order: { type: Number }
@@ -177,6 +182,7 @@ export class Video extends Document {
     default: []
   })
   faqs: Array<{
+    id: string;
     question: string;
     answer: string;
     order: number;
@@ -185,8 +191,19 @@ export class Video extends Document {
   @Prop()
   moduleUrl: string;
 
-  @Prop()
-  overview: string; // Rich text overview/introduction
+  @Prop({
+    type: [{
+      id: { type: String },
+      title: { type: String },
+      description: { type: String }
+    }],
+    default: []
+  })
+  overview: Array<{
+    id: string;
+    title: string;
+    description: string;
+  }>;
 
   createdAt?: Date;
   updatedAt?: Date;

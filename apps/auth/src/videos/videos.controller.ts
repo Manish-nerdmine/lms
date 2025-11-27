@@ -80,7 +80,7 @@ export class VideosController {
           items: {
             type: 'object',
             properties: {
-              icon: { type: 'string', description: 'Icon URL' },
+              id: { type: 'string', description: 'Unique identifier' },
               title: { type: 'string', description: 'Step title' },
               description: { type: 'string', description: 'Step description' },
               order: { type: 'number', description: 'Step order' },
@@ -93,6 +93,7 @@ export class VideosController {
           items: {
             type: 'object',
             properties: {
+              id: { type: 'string', description: 'Unique identifier' },
               title: { type: 'string', description: 'Section title' },
               content: { type: 'string', description: 'Section content' },
               order: { type: 'number', description: 'Section order' },
@@ -105,6 +106,7 @@ export class VideosController {
           items: {
             type: 'object',
             properties: {
+              id: { type: 'string', description: 'Unique identifier' },
               title: { type: 'string', description: 'Accordion title' },
               content: { type: 'string', description: 'Accordion content' },
               isExpanded: { type: 'boolean', description: 'Is expanded by default' },
@@ -118,6 +120,7 @@ export class VideosController {
           items: {
             type: 'object',
             properties: {
+              id: { type: 'string', description: 'Unique identifier' },
               question: { type: 'string', description: 'FAQ question' },
               answer: { type: 'string', description: 'FAQ answer' },
               order: { type: 'number', description: 'FAQ order' },
@@ -129,8 +132,16 @@ export class VideosController {
           description: 'Module URL',
         },
         overview: {
-          type: 'string',
-          description: 'Overview/introduction text',
+          type: 'array',
+          description: 'Overview/introduction items',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'Unique identifier' },
+              title: { type: 'string', description: 'Overview title' },
+              description: { type: 'string', description: 'Overview description' },
+            },
+          },
         },
       },
     },
@@ -162,6 +173,20 @@ export class VideosController {
   @Get()
   async findAll(@Param('courseId') courseId: string) {
     return this.videosService.findAll(courseId);
+  }
+
+  @Get('drafts')
+  async findAllDrafts(@Param('courseId') courseId: string) {
+    return this.videosService.findAllDrafts(courseId);
+  }
+
+  @Post(':id/draft')
+  async saveDraft(
+    @Param('courseId') courseId: string,
+    @Param('id') id: string,
+    @Body() updateData: UpdateVideoDto,
+  ) {
+    return this.videosService.saveDraft(id, updateData);
   }
 
   @Get(':id')
@@ -232,7 +257,7 @@ export class VideosController {
           items: {
             type: 'object',
             properties: {
-              icon: { type: 'string' },
+              id: { type: 'string' },
               title: { type: 'string' },
               description: { type: 'string' },
               order: { type: 'number' },
@@ -245,6 +270,7 @@ export class VideosController {
           items: {
             type: 'object',
             properties: {
+              id: { type: 'string' },
               title: { type: 'string' },
               content: { type: 'string' },
               order: { type: 'number' },
@@ -257,6 +283,7 @@ export class VideosController {
           items: {
             type: 'object',
             properties: {
+              id: { type: 'string' },
               title: { type: 'string' },
               content: { type: 'string' },
               isExpanded: { type: 'boolean' },
@@ -270,6 +297,7 @@ export class VideosController {
           items: {
             type: 'object',
             properties: {
+              id: { type: 'string' },
               question: { type: 'string' },
               answer: { type: 'string' },
               order: { type: 'number' },
@@ -277,7 +305,18 @@ export class VideosController {
           },
         },
         moduleUrl: { type: 'string', description: 'Module URL' },
-        overview: { type: 'string', description: 'Overview/introduction text' },
+        overview: {
+          type: 'array',
+          description: 'Overview/introduction items',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string' },
+            },
+          },
+        },
       },
     },
   })

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { EmployeeTrainingModule } from './employee-training/employee-training.module';
 import { AUTH_SERVICE, DatabaseModule, HealthModule, LoggerModule, UserPasscodeDocument, UserPasscodeSchema } from '@app/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
@@ -68,9 +69,10 @@ import { ScheduledTasksModule } from './scheduled-tasks/scheduled-tasks.module';
     DashboardModule,
     SuperAdminModule,
     ScheduledTasksModule,
+    EmployeeTrainingModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, PasscodeService, PasscodeRepository, ClientsModule],
   exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }
