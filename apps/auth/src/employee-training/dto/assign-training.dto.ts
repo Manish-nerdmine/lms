@@ -19,6 +19,41 @@ class TodoItemDto {
     description?: string;
 }
 
+class SectionItemDto {
+    @ApiProperty({ description: 'Unique identifier for the section item', required: false })
+    @IsOptional()
+    @IsString()
+    id?: string;
+
+    @ApiProperty({ description: 'Title of the section item' })
+    @IsNotEmpty()
+    @IsString()
+    title: string;
+
+    @ApiProperty({ description: 'Content of the section item' })
+    @IsNotEmpty()
+    @IsString()
+    content: string;
+}
+
+class SectionDto {
+    @ApiProperty({ description: 'Unique identifier for the section', required: false })
+    @IsOptional()
+    @IsString()
+    id?: string;
+
+    @ApiProperty({ description: 'Title of the section' })
+    @IsNotEmpty()
+    @IsString()
+    sectionTitle: string;
+
+    @ApiProperty({ description: 'Items in the section', type: [SectionItemDto] })
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => SectionItemDto)
+    items: SectionItemDto[];
+}
+
 export class AssignTrainingDto {
     @ApiProperty({ description: 'Employment ID of the employee' })
     @IsNotEmpty()
@@ -47,4 +82,11 @@ export class AssignTrainingDto {
     @ValidateNested({ each: true })
     @Type(() => TodoItemDto)
     todoList?: TodoItemDto[];
+
+    @ApiProperty({ description: 'Sections for the training', required: false, type: [SectionDto] })
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => SectionDto)
+    sections?: SectionDto[];
 }

@@ -43,6 +43,28 @@ export class EmployeeTraining extends Document {
         completedAt?: Date;
     }>;
 
+    @Prop({
+        type: [{
+            id: { type: String },
+            sectionTitle: { type: String },
+            items: [{
+                id: { type: String },
+                title: { type: String },
+                content: { type: String }
+            }]
+        }],
+        default: []
+    })
+    sections: Array<{
+        id: string;
+        sectionTitle: string;
+        items: Array<{
+            id: string;
+            title: string;
+            content: string;
+        }>;
+    }>;
+
     @Prop({ default: 0 })
     progressPercentage: number;
 
