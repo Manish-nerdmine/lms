@@ -2,7 +2,7 @@ import { IsNotEmpty, IsOptional, IsString, IsArray, IsUrl, IsNumber, IsBoolean, 
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
-class OverviewItemDto {
+export class OverviewItemDto {
   @ApiProperty({ description: 'Unique identifier for the overview item', required: false })
   @IsOptional()
   @IsString()
@@ -19,7 +19,7 @@ class OverviewItemDto {
   description: string;
 }
 
-class JourneyStepDto {
+export class JourneyStepDto {
   @ApiProperty({ description: 'Unique identifier for the journey step', required: false })
   @IsOptional()
   @IsString()
@@ -41,7 +41,7 @@ class JourneyStepDto {
   order?: number;
 }
 
-class InfoSectionDto {
+export class InfoSectionDto {
   @ApiProperty({ description: 'Unique identifier for the info section', required: false })
   @IsOptional()
   @IsString()
@@ -63,21 +63,39 @@ class InfoSectionDto {
   order?: number;
 }
 
-class AccordionDto {
+export class AccordionItemDto {
+  @ApiProperty({ description: 'Unique identifier for the accordion item', required: false })
+  @IsOptional()
+  @IsString()
+  id?: string;
+
+  @ApiProperty({ description: 'Title of the accordion item' })
+  @IsNotEmpty()
+  @IsString()
+  title: string;
+
+  @ApiProperty({ description: 'Content of the accordion item' })
+  @IsNotEmpty()
+  @IsString()
+  content: string;
+}
+
+export class AccordionDto {
   @ApiProperty({ description: 'Unique identifier for the accordion', required: false })
   @IsOptional()
   @IsString()
   id?: string;
 
-  @ApiProperty({ description: 'Title of the accordion' })
+  @ApiProperty({ description: 'Title of the section' })
   @IsNotEmpty()
   @IsString()
-  title: string;
+  sectionTitle: string;
 
-  @ApiProperty({ description: 'Content of the accordion', required: false })
-  @IsOptional()
-  @IsString()
-  content?: string;
+  @ApiProperty({ description: 'Items in the accordion', type: [AccordionItemDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AccordionItemDto)
+  items: AccordionItemDto[];
 
   @ApiProperty({ description: 'Whether the accordion is expanded by default', required: false, default: false })
   @IsOptional()
@@ -90,7 +108,7 @@ class AccordionDto {
   order?: number;
 }
 
-class FaqDto {
+export class FaqDto {
   @ApiProperty({ description: 'Unique identifier for the FAQ', required: false })
   @IsOptional()
   @IsString()
