@@ -157,8 +157,15 @@ export class Video extends Document {
   @Prop({
     type: [{
       id: { type: String },
-      title: { type: String },
-      content: { type: String },
+      sectionTitle: { type: String },
+      items: {
+        type: [{
+          id: { type: String },
+          title: { type: String },
+          content: { type: String }
+        }],
+        default: []
+      },
       isExpanded: { type: Boolean, default: false },
       order: { type: Number }
     }],
@@ -166,8 +173,12 @@ export class Video extends Document {
   })
   accordions: Array<{
     id: string;
-    title: string;
-    content: string;
+    sectionTitle: string;
+    items: Array<{
+      id: string;
+      title: string;
+      content: string;
+    }>;
     isExpanded: boolean;
     order: number;
   }>;
