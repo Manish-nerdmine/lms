@@ -1,11 +1,11 @@
 import { PartialType, ApiProperty, OmitType } from '@nestjs/swagger';
-import { CreateVideoDto, JourneyStepDto, InfoSectionDto, AccordionDto, FaqDto, OverviewItemDto } from './create-video.dto';
+import { CreateVideoDto, JourneyStepDto, InfoSectionDto, AccordionItemDto, FaqDto, OverviewItemDto } from './create-video.dto';
 import { IsOptional, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class UpdateJourneyStepDto extends PartialType(JourneyStepDto) { }
 class UpdateInfoSectionDto extends PartialType(InfoSectionDto) { }
-class UpdateAccordionDto extends PartialType(AccordionDto) { }
+class UpdateAccordionItemDto extends PartialType(AccordionItemDto) { }
 class UpdateFaqDto extends PartialType(FaqDto) { }
 class UpdateOverviewItemDto extends PartialType(OverviewItemDto) { }
 
@@ -26,12 +26,12 @@ export class UpdateVideoDto extends PartialType(
     @Type(() => UpdateInfoSectionDto)
     infoSections?: UpdateInfoSectionDto[];
 
-    @ApiProperty({ description: 'Accordions for the video', required: false, type: [UpdateAccordionDto] })
+    @ApiProperty({ description: 'Accordions for the video', required: false, type: [UpdateAccordionItemDto] })
     @IsOptional()
     @IsArray()
     @ValidateNested({ each: true })
-    @Type(() => UpdateAccordionDto)
-    accordions?: UpdateAccordionDto[];
+    @Type(() => UpdateAccordionItemDto)
+    accordions?: UpdateAccordionItemDto[];
 
     @ApiProperty({ description: 'FAQs for the video', required: false, type: [UpdateFaqDto] })
     @IsOptional()

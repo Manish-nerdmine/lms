@@ -78,31 +78,13 @@ export class AccordionItemDto {
   @IsNotEmpty()
   @IsString()
   content: string;
-}
-
-export class AccordionDto {
-  @ApiProperty({ description: 'Unique identifier for the accordion', required: false })
-  @IsOptional()
-  @IsString()
-  id?: string;
-
-  @ApiProperty({ description: 'Title of the section' })
-  @IsNotEmpty()
-  @IsString()
-  sectionTitle: string;
-
-  @ApiProperty({ description: 'Items in the accordion', type: [AccordionItemDto] })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => AccordionItemDto)
-  items: AccordionItemDto[];
 
   @ApiProperty({ description: 'Whether the accordion is expanded by default', required: false, default: false })
   @IsOptional()
   @IsBoolean()
   isExpanded?: boolean;
 
-  @ApiProperty({ description: 'Order of the accordion', required: false })
+  @ApiProperty({ description: 'Order of the accordion item', required: false })
   @IsOptional()
   @IsNumber()
   order?: number;
@@ -181,12 +163,12 @@ export class CreateVideoDto {
   @Type(() => InfoSectionDto)
   infoSections?: InfoSectionDto[];
 
-  @ApiProperty({ description: 'Accordions for the video', required: false, type: [AccordionDto] })
+  @ApiProperty({ description: 'Accordions for the video', required: false, type: [AccordionItemDto] })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => AccordionDto)
-  accordions?: AccordionDto[];
+  @Type(() => AccordionItemDto)
+  accordions?: AccordionItemDto[];
 
   @ApiProperty({ description: 'FAQs for the video', required: false, type: [FaqDto] })
   @IsOptional()
