@@ -107,8 +107,19 @@ export class VideosController {
             type: 'object',
             properties: {
               id: { type: 'string', description: 'Unique identifier' },
-              title: { type: 'string', description: 'Accordion title' },
-              content: { type: 'string', description: 'Accordion content' },
+              sectionTitle: { type: 'string', description: 'Section title' },
+              items: {
+                type: 'array',
+                description: 'Accordion items',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string', description: 'Item unique identifier' },
+                    title: { type: 'string', description: 'Item title' },
+                    content: { type: 'string', description: 'Item content' },
+                  },
+                },
+              },
               isExpanded: { type: 'boolean', description: 'Is expanded by default' },
               order: { type: 'number', description: 'Accordion order' },
             },
@@ -284,8 +295,19 @@ export class VideosController {
             type: 'object',
             properties: {
               id: { type: 'string' },
-              title: { type: 'string' },
-              content: { type: 'string' },
+              sectionTitle: { type: 'string' },
+              items: {
+                type: 'array',
+                description: 'Accordion items',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    title: { type: 'string' },
+                    content: { type: 'string' },
+                  },
+                },
+              },
               isExpanded: { type: 'boolean' },
               order: { type: 'number' },
             },
