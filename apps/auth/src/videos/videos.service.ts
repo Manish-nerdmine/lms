@@ -95,6 +95,9 @@ export class VideosService {
     const course = await this.courseModel.findById(courseId).exec();
     const isSuperAdminVideo = course?.isSuperAdminCourse === true;
 
+    // Log incoming DTO for debugging
+    this.logger.log(`Creating video with DTO: ${JSON.stringify({ title: createVideoDto.title, subtitle: createVideoDto.subtitle })}`);
+
     // Create video document
     const video = new this.videoModel({
       ...createVideoDto,
@@ -271,7 +274,13 @@ export class VideosService {
       throw new ForbiddenException('Cannot edit videos created by super admin. Only super admins can edit these videos.');
     }
 
-    return await this.videoModel.findOneAndUpdate({ _id: videoId }, updateData, { new: true }).exec();
+    // If video is in draft status and we're doing a regular update (not draft save), change status to 'ready'
+    const dataToUpdate = {
+      ...updateData,
+      ...(video.status === 'draft' ? { status: 'ready' } : {}),
+    };
+
+    return await this.videoModel.findOneAndUpdate({ _id: videoId }, dataToUpdate, { new: true }).exec();
   }
 
   async saveDraft(videoId: string, updateData: UpdateVideoDto): Promise<Video> {

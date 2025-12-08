@@ -124,6 +124,7 @@ export class Video extends Document {
   // UI Section Fields
   @Prop({
     type: [{
+      _id: false,
       id: { type: String },
       title: { type: String },
       description: { type: String },
@@ -140,6 +141,7 @@ export class Video extends Document {
 
   @Prop({
     type: [{
+      _id: false,
       id: { type: String },
       title: { type: String },
       content: { type: String },
@@ -156,10 +158,12 @@ export class Video extends Document {
 
   @Prop({
     type: [{
+      _id: false,
       id: { type: String },
       sectionTitle: { type: String },
       items: {
         type: [{
+          _id: false,
           id: { type: String },
           title: { type: String },
           content: { type: String }
@@ -185,6 +189,7 @@ export class Video extends Document {
 
   @Prop({
     type: [{
+      _id: false,
       id: { type: String },
       question: { type: String },
       answer: { type: String },
@@ -204,6 +209,7 @@ export class Video extends Document {
 
   @Prop({
     type: [{
+      _id: false,
       id: { type: String },
       title: { type: String },
       description: { type: String }
